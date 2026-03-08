@@ -108,7 +108,7 @@ public struct SyncableMacro: ExtensionMacro {
 
                     static func _syncMake(from values: [String: Any], keyStyle: KeyStyle) throws -> \(raw: typeName) {
                         let payload = SyncPayload(values: values, keyStyle: keyStyle)
-                        \(raw: typeName)(
+                        return \(raw: typeName)(
                             \(raw: makeArguments)
                         )
                     }
