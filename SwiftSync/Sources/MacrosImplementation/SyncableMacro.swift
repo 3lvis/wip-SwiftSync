@@ -91,7 +91,7 @@ public struct SyncableMacro: ExtensionMacro {
         return [
             try ExtensionDeclSyntax(
                 """
-                extension \(type.trimmed): SyncUpdatableModel {
+                extension \(type.trimmed): SyncModelable {
                     typealias SyncID = \(raw: identityProperty.typeSource)
 
                     static var syncIdentity: KeyPath<\(raw: typeName), \(raw: identityProperty.typeSource)> { \\.\(raw: identityProperty.name) }
@@ -106,42 +106,51 @@ public struct SyncableMacro: ExtensionMacro {
                         \(raw: relationshipSchemaDescriptorsBody)
                     }
 
-                    static func make(from payload: SyncPayload) throws -> \(raw: typeName) {
+                    static func _syncMake(from values: [String: Any], keyStyle: KeyStyle) throws -> \(raw: typeName) {
+                        let payload = SyncPayload(values: values, keyStyle: keyStyle)
                         \(raw: typeName)(
                             \(raw: makeArguments)
                         )
                     }
 
-                    func apply(_ payload: SyncPayload) throws -> Bool {
+                    func _syncApply(from values: [String: Any], keyStyle: KeyStyle) throws -> Bool {
+                        let payload = SyncPayload(values: values, keyStyle: keyStyle)
                         var changed = false
                         \(raw: applyBody)
                         return changed
                     }
 
                     func syncApplyGeneratedRelationships(
-                        _ payload: SyncPayload,
+                        from values: [String: Any],
+                        keyStyle: KeyStyle,
                         in context: ModelContext,
                         operations: SyncRelationshipOperations = .all
                     ) throws -> Bool {
                         guard !operations.isDisjoint(with: [.insert, .update, .delete]) else { return false }
+                        let payload = SyncPayload(values: values, keyStyle: keyStyle)
                         \(raw: relationshipApplyBody.isEmpty ? "return false" : "var changed = false")
                         \(raw: relationshipApplyBody)
                         \(raw: relationshipApplyBody.isEmpty ? "" : "return changed")
                     }
 
-                    func applyRelationships(_ payload: SyncPayload, in context: ModelContext) async throws -> Bool {
-                        try syncApplyGeneratedRelationships(payload, in: context, operations: .all)
+                    func _syncApplyRelationships(
+                        from values: [String: Any],
+                        keyStyle: KeyStyle,
+                        in context: ModelContext
+                    ) async throws -> Bool {
+                        try syncApplyGeneratedRelationships(from: values, keyStyle: keyStyle, in: context, operations: .all)
                     }
 
-                    func applyRelationships(
-                        _ payload: SyncPayload,
+                    func _syncApplyRelationships(
+                        from values: [String: Any],
+                        keyStyle: KeyStyle,
                         in context: ModelContext,
                         operations: SyncRelationshipOperations
                     ) async throws -> Bool {
-                        try syncApplyGeneratedRelationships(payload, in: context, operations: operations)
+                        try syncApplyGeneratedRelationships(from: values, keyStyle: keyStyle, in: context, operations: operations)
                     }
 
-                    func exportObject(keyStyle: KeyStyle, dateFormatter: DateFormatter) -> [String: Any] {
+                    func _syncExportObject(keyStyle: KeyStyle, dateFormatter: DateFormatter) -> [String: Any] {
                         if !ExportState.enter(self) {
                             return [:]
                         }
@@ -417,8 +426,8 @@ public struct SyncableMacro: ExtensionMacro {
                     let baseKey = \(keyExpr)
                     let exportedChildren: [[String: Any]] = self.\(property.name).compactMap { child in
                         let anyChild: Any = child
-                        guard let exportable = anyChild as? any SyncUpdatableModel else { return nil }
-                        return exportable.exportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
+                        guard let exportable = anyChild as? any SyncModelable else { return nil }
+                        return exportable._syncExportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
                     }
                     exportSetValue(exportedChildren, for: baseKey, into: &result)
                 }
@@ -428,8 +437,8 @@ public struct SyncableMacro: ExtensionMacro {
             do {
                 let baseKey = \(keyExpr)
                 let anyChild: Any? = self.\(property.name)
-                if let exportable = anyChild as? any SyncUpdatableModel {
-                    let child = exportable.exportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
+                if let exportable = anyChild as? any SyncModelable {
+                    let child = exportable._syncExportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
                     exportSetValue(child, for: baseKey, into: &result)
                 } else {
                     exportSetValue(NSNull(), for: baseKey, into: &result)
@@ -529,7 +538,8 @@ public struct SyncableMacro: ExtensionMacro {
                     if try syncApplyToManyForeignKeys(
                         self,
                         relationship: \\\(typeName).\(property.name),
-                        payload: payload,
+                        values: values,
+                        keyStyle: keyStyle,
                         keys: [\(fkKeysLiteral)],
                         in: context,
                         operations: operations
@@ -540,7 +550,8 @@ public struct SyncableMacro: ExtensionMacro {
                     if try syncApplyToManyNestedObjects(
                         self,
                         relationship: \\\(typeName).\(property.name),
-                        payload: payload,
+                        values: values,
+                        keyStyle: keyStyle,
                         keys: [\(nestedKeysLiteral)],
                         in: context,
                         operations: operations
@@ -556,7 +567,8 @@ public struct SyncableMacro: ExtensionMacro {
                 if try syncApplyToOneForeignKey(
                     self,
                     relationship: \\\(typeName).\(property.name),
-                    payload: payload,
+                    values: values,
+                    keyStyle: keyStyle,
                     keys: [\(fkKeysLiteral)],
                     in: context,
                     operations: operations
@@ -567,7 +579,8 @@ public struct SyncableMacro: ExtensionMacro {
                 if try syncApplyToOneNestedObject(
                     self,
                     relationship: \\\(typeName).\(property.name),
-                    payload: payload,
+                    values: values,
+                    keyStyle: keyStyle,
                     keys: [\(nestedKeysLiteral)],
                     in: context,
                     operations: operations

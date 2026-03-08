@@ -54,6 +54,26 @@ public protocol SyncModelable: PersistentModel {
     static var syncDefaultRefreshModelTypes: [any PersistentModel.Type] { get }
     static func syncRelatedModelType(for keyPath: PartialKeyPath<Self>) -> (any PersistentModel.Type)?
     static var syncRelationshipSchemaDescriptors: [SyncRelationshipSchemaDescriptor] { get }
+
+    static func _syncMake(from values: [String: Any], keyStyle: KeyStyle) throws -> Self
+    func _syncApply(from values: [String: Any], keyStyle: KeyStyle) throws -> Bool
+    func _syncApplyRelationships(
+        from values: [String: Any],
+        keyStyle: KeyStyle,
+        in context: ModelContext
+    ) async throws -> Bool
+    func _syncApplyRelationships(
+        from values: [String: Any],
+        keyStyle: KeyStyle,
+        in context: ModelContext,
+        operations: SyncRelationshipOperations
+    ) async throws -> Bool
+    func _syncExportObject(keyStyle: KeyStyle, dateFormatter: DateFormatter) -> [String: Any]
+
+    /// Forces a scalar write so iOS CoreData marks the owning row dirty after a to-many change.
+    /// `@Syncable` generates `self.id = self.id`. Hand-written conformances get a no-op default
+    /// — override if your model has to-many relationships. See docs/project/ios-dirty-tracking-gap.md.
+    func syncMarkChanged()
 }
 
 public extension SyncModelable {
@@ -78,6 +98,100 @@ public extension SyncModelable {
     }
 
     static var syncRelationshipSchemaDescriptors: [SyncRelationshipSchemaDescriptor] { [] }
+
+    func syncMarkChanged() {}
+
+    func _syncApplyRelationships(
+        from _: [String: Any],
+        keyStyle _: KeyStyle,
+        in _: ModelContext
+    ) async throws -> Bool {
+        false
+    }
+
+    func _syncApplyRelationships(
+        from values: [String: Any],
+        keyStyle: KeyStyle,
+        in context: ModelContext,
+        operations _: SyncRelationshipOperations
+    ) async throws -> Bool {
+        try await _syncApplyRelationships(from: values, keyStyle: keyStyle, in: context)
+    }
+
+    func _syncExportObject(keyStyle _: KeyStyle, dateFormatter _: DateFormatter) -> [String: Any] {
+        [:]
+    }
+
+    func exportObject(for container: SyncContainer) -> [String: Any] {
+        _syncExportObject(
+            keyStyle: container.keyStyle,
+            dateFormatter: container.dateFormatter
+        )
+    }
+}
+
+@available(*, deprecated, message: "Use @Syncable-generated SyncModelable runtime methods instead.")
+public protocol SyncUpdatableModel: SyncModelable {
+    static func make(from payload: SyncPayload) throws -> Self
+    func apply(_ payload: SyncPayload) throws -> Bool
+    func applyRelationships(_ payload: SyncPayload, in context: ModelContext) async throws -> Bool
+    func applyRelationships(
+        _ payload: SyncPayload,
+        in context: ModelContext,
+        operations: SyncRelationshipOperations
+    ) async throws -> Bool
+    func exportObject(keyStyle: KeyStyle, dateFormatter: DateFormatter) -> [String: Any]
+}
+
+public extension SyncUpdatableModel {
+    static func _syncMake(from values: [String: Any], keyStyle: KeyStyle) throws -> Self {
+        try make(from: SyncPayload(values: values, keyStyle: keyStyle))
+    }
+
+    func _syncApply(from values: [String: Any], keyStyle: KeyStyle) throws -> Bool {
+        try apply(SyncPayload(values: values, keyStyle: keyStyle))
+    }
+
+    func _syncApplyRelationships(
+        from values: [String: Any],
+        keyStyle: KeyStyle,
+        in context: ModelContext
+    ) async throws -> Bool {
+        try await applyRelationships(SyncPayload(values: values, keyStyle: keyStyle), in: context)
+    }
+
+    func _syncApplyRelationships(
+        from values: [String: Any],
+        keyStyle: KeyStyle,
+        in context: ModelContext,
+        operations: SyncRelationshipOperations
+    ) async throws -> Bool {
+        try await applyRelationships(
+            SyncPayload(values: values, keyStyle: keyStyle),
+            in: context,
+            operations: operations
+        )
+    }
+
+    func _syncExportObject(keyStyle: KeyStyle, dateFormatter: DateFormatter) -> [String: Any] {
+        exportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
+    }
+
+    func applyRelationships(_ payload: SyncPayload, in context: ModelContext) async throws -> Bool {
+        false
+    }
+
+    func applyRelationships(
+        _ payload: SyncPayload,
+        in context: ModelContext,
+        operations: SyncRelationshipOperations
+    ) async throws -> Bool {
+        try await applyRelationships(payload, in: context)
+    }
+
+    func exportObject(keyStyle _: KeyStyle, dateFormatter _: DateFormatter) -> [String: Any] {
+        [:]
+    }
 }
 
 public struct SyncRelationshipSchemaDescriptor: Sendable {
@@ -99,60 +213,18 @@ public struct SyncRelationshipSchemaDescriptor: Sendable {
     }
 }
 
-public protocol SyncUpdatableModel: SyncModelable {
-    static func make(from payload: SyncPayload) throws -> Self
-    func apply(_ payload: SyncPayload) throws -> Bool
-    func applyRelationships(_ payload: SyncPayload, in context: ModelContext) async throws -> Bool
-    func applyRelationships(
-        _ payload: SyncPayload,
-        in context: ModelContext,
-        operations: SyncRelationshipOperations
-    ) async throws -> Bool
-    func exportObject(keyStyle: KeyStyle, dateFormatter: DateFormatter) -> [String: Any]
-
-    /// Forces a scalar write so iOS CoreData marks the owning row dirty after a to-many change.
-    /// `@Syncable` generates `self.id = self.id`. Hand-written conformances get a no-op default
-    /// — override if your model has to-many relationships. See docs/project/ios-dirty-tracking-gap.md.
-    func syncMarkChanged()
-}
-
-public extension SyncUpdatableModel {
-    func syncMarkChanged() {}
-
-    func applyRelationships(_ payload: SyncPayload, in context: ModelContext) async throws -> Bool {
-        false
-    }
-
-    func applyRelationships(
-        _ payload: SyncPayload,
-        in context: ModelContext,
-        operations: SyncRelationshipOperations
-    ) async throws -> Bool {
-        try await applyRelationships(payload, in: context)
-    }
-
-    func exportObject(keyStyle _: KeyStyle, dateFormatter _: DateFormatter) -> [String: Any] {
-        [:]
-    }
-
-    func exportObject(for container: SyncContainer) -> [String: Any] {
-        exportObject(
-            keyStyle: container.keyStyle,
-            dateFormatter: container.dateFormatter
-        )
-    }
-}
-
 @discardableResult
 public func syncApplyToOneForeignKey<Owner, Related: PersistentModel>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, Related?>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
     _ = context
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canClear = operations.contains(.delete)
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
     guard payload.value(for: key, as: NSNull.self) != nil else { return false }
@@ -168,11 +240,13 @@ public func syncApplyToOneForeignKey<Owner, Related: PersistentModel>(
 public func syncApplyToOneForeignKey<Owner, Related: SyncModelable>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, Related?>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canLink = !operations.isDisjoint(with: [.insert, .update])
     let canClear = operations.contains(.delete)
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
@@ -214,11 +288,13 @@ public func syncApplyToOneForeignKey<Owner, Related: SyncModelable>(
 public func syncApplyToOneForeignKey<Owner, Related: PersistentModel>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, Related>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     _ = owner
     _ = relationship
     _ = payload
@@ -232,11 +308,13 @@ public func syncApplyToOneForeignKey<Owner, Related: PersistentModel>(
 public func syncApplyToOneForeignKey<Owner, Related: SyncModelable>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, Related>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canLink = !operations.isDisjoint(with: [.insert, .update])
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
 
@@ -271,12 +349,14 @@ public func syncApplyToOneForeignKey<Owner, Related: SyncModelable>(
 public func syncApplyToManyForeignKeys<Owner, Related: PersistentModel>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, [Related]>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
     _ = context
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canClear = operations.contains(.delete)
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
 
@@ -301,14 +381,16 @@ public func syncApplyToManyForeignKeys<Owner, Related: PersistentModel>(
 }
 
 @discardableResult
-public func syncApplyToManyForeignKeys<Owner: SyncUpdatableModel, Related: SyncModelable>(
+public func syncApplyToManyForeignKeys<Owner: SyncModelable, Related: SyncModelable>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, [Related]>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canAdd = !operations.isDisjoint(with: [.insert, .update])
     let canDelete = operations.contains(.delete)
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
@@ -357,11 +439,13 @@ public func syncApplyToManyForeignKeys<Owner: SyncUpdatableModel, Related: SyncM
 public func syncApplyToOneNestedObject<Owner, Related: PersistentModel>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, Related?>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     _ = owner
     _ = relationship
     _ = payload
@@ -372,14 +456,16 @@ public func syncApplyToOneNestedObject<Owner, Related: PersistentModel>(
 }
 
 @discardableResult
-public func syncApplyToOneNestedObject<Owner, Related: SyncUpdatableModel>(
+public func syncApplyToOneNestedObject<Owner, Related: SyncModelable>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, Related?>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canLink = !operations.isDisjoint(with: [.insert, .update])
     let canClear = operations.contains(.delete)
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
@@ -410,19 +496,19 @@ public func syncApplyToOneNestedObject<Owner, Related: SyncUpdatableModel>(
     if let nestedIdentity = resolveIdentity(from: nestedPayload, model: Related.self),
         let existing = relatedByID[nestedIdentity]
     {
-        if operations.contains(.update), try existing.apply(nestedPayload) {
+        if operations.contains(.update), try existing._syncApply(from: nestedValues, keyStyle: payload.keyStyle) {
             changed = true
         }
         resolvedRelated = existing
     } else if let current = owner[keyPath: relationship], operations.contains(.update),
         resolveIdentity(from: nestedPayload, model: Related.self) == nil
     {
-        if try current.apply(nestedPayload) {
+        if try current._syncApply(from: nestedValues, keyStyle: payload.keyStyle) {
             changed = true
         }
         resolvedRelated = current
     } else if operations.contains(.insert) {
-        let created = try Related.make(from: nestedPayload)
+        let created = try Related._syncMake(from: nestedValues, keyStyle: payload.keyStyle)
         context.insert(created)
         if let createdIdentity = resolveIdentity(from: created) {
             relatedByID[createdIdentity] = created
@@ -443,11 +529,13 @@ public func syncApplyToOneNestedObject<Owner, Related: SyncUpdatableModel>(
 public func syncApplyToManyNestedObjects<Owner, Related: PersistentModel>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, [Related]>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     _ = owner
     _ = relationship
     _ = payload
@@ -458,14 +546,16 @@ public func syncApplyToManyNestedObjects<Owner, Related: PersistentModel>(
 }
 
 @discardableResult
-public func syncApplyToManyNestedObjects<Owner, Related: SyncUpdatableModel>(
+public func syncApplyToManyNestedObjects<Owner, Related: SyncModelable>(
     _ owner: Owner,
     relationship: ReferenceWritableKeyPath<Owner, [Related]>,
-    payload: SyncPayload,
+    values: [String: Any],
+    keyStyle: KeyStyle,
     keys: [String],
     in context: ModelContext,
     operations: SyncRelationshipOperations = .all
 ) throws -> Bool {
+    let payload = SyncPayload(values: values, keyStyle: keyStyle)
     let canAdd = !operations.isDisjoint(with: [.insert, .update])
     let canDelete = operations.contains(.delete)
     guard let key = firstPresentPayloadKey(payload, keys: keys) else { return false }
@@ -501,12 +591,12 @@ public func syncApplyToManyNestedObjects<Owner, Related: SyncUpdatableModel>(
         if let nestedIdentity = resolveIdentity(from: nestedPayload, model: Related.self),
             let existing = relatedByID[nestedIdentity]
         {
-            if operations.contains(.update), try existing.apply(nestedPayload) {
+            if operations.contains(.update), try existing._syncApply(from: nestedValue, keyStyle: payload.keyStyle) {
                 changed = true
             }
             resolved = existing
         } else if operations.contains(.insert) {
-            let created = try Related.make(from: nestedPayload)
+            let created = try Related._syncMake(from: nestedValue, keyStyle: payload.keyStyle)
             context.insert(created)
             if let createdIdentity = resolveIdentity(from: created) {
                 relatedByID[createdIdentity] = created
@@ -534,6 +624,174 @@ public func syncApplyToManyNestedObjects<Owner, Related: SyncUpdatableModel>(
     }
 
     return changed
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToOneForeignKey<Owner, Related: PersistentModel>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, Related?>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToOneForeignKey(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToOneForeignKey<Owner, Related: SyncModelable>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, Related?>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToOneForeignKey(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToManyForeignKeys<Owner, Related: PersistentModel>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, [Related]>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToManyForeignKeys(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToManyForeignKeys<Owner: SyncModelable, Related: SyncModelable>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, [Related]>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToManyForeignKeys(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToOneNestedObject<Owner, Related: PersistentModel>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, Related?>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToOneNestedObject(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToOneNestedObject<Owner, Related: SyncModelable>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, Related?>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToOneNestedObject(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToManyNestedObjects<Owner, Related: PersistentModel>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, [Related]>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToManyNestedObjects(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
+}
+
+@available(*, deprecated, message: "Use values/keyStyle overloads instead.")
+@discardableResult
+public func syncApplyToManyNestedObjects<Owner, Related: SyncModelable>(
+    _ owner: Owner,
+    relationship: ReferenceWritableKeyPath<Owner, [Related]>,
+    payload: SyncPayload,
+    keys: [String],
+    in context: ModelContext,
+    operations: SyncRelationshipOperations = .all
+) throws -> Bool {
+    try syncApplyToManyNestedObjects(
+        owner,
+        relationship: relationship,
+        values: payload.values,
+        keyStyle: payload.keyStyle,
+        keys: keys,
+        in: context,
+        operations: operations
+    )
 }
 
 private func firstPresentPayloadKey(_ payload: SyncPayload, keys: [String]) -> String? {
@@ -601,7 +859,7 @@ private func syncIdentityKey<ID: Hashable>(from identity: ID) -> String {
     String(describing: identity)
 }
 
-public protocol ParentScopedModel: SyncUpdatableModel {
+public protocol ParentScopedModel: SyncModelable {
     associatedtype SyncParent: PersistentModel
     static var parentRelationship: ReferenceWritableKeyPath<Self, SyncParent?> { get }
 }

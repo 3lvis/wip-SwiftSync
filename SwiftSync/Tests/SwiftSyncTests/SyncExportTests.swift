@@ -198,15 +198,14 @@ final class UpdateTaskLike {
     }
 }
 
-// Compile-time regression: exportObject must be a requirement of SyncUpdatableModel,
-// not a separate ExportModel protocol. This function would not compile if exportObject
-// were missing from SyncUpdatableModel.
-private func _assertExportObjectIsOnSyncUpdatableModel<M: SyncUpdatableModel>(
+// Compile-time regression: export support must be available on the single SyncModelable
+// runtime contract used by generated macro output.
+private func _assertExportObjectIsOnSyncModelable<M: SyncModelable>(
     _ model: M,
     keyStyle: KeyStyle,
     dateFormatter: DateFormatter
 ) -> [String: Any] {
-    model.exportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
+    model._syncExportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
 }
 
 final class ExportTests: XCTestCase {

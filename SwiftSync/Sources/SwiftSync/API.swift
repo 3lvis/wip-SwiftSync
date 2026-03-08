@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 extension SwiftSync {
-    static func sync<Model: SyncUpdatableModel>(
+    static func sync<Model: SyncModelable>(
         payload: [Any],
         as _: Model.Type,
         in context: ModelContext,
@@ -48,13 +48,14 @@ extension SwiftSync {
                 seenKeys.insert(key)
 
                 if let row = index[key] {
-                    if try row.apply(payloadModel) {
+                    if try row._syncApply(from: entry, keyStyle: keyStyle) {
                         changed = true
                     }
                     if !relationshipOperations.isDisjoint(with: [.update, .delete]) {
                         try throwIfCancelled()
-                        if try await row.applyRelationships(
-                            payloadModel,
+                        if try await row._syncApplyRelationships(
+                            from: entry,
+                            keyStyle: keyStyle,
                             in: context,
                             operations: relationshipOperations
                         ) {
@@ -65,12 +66,13 @@ extension SwiftSync {
                     continue
                 }
 
-                let created = try Model.make(from: payloadModel)
+                let created = try Model._syncMake(from: entry, keyStyle: keyStyle)
                 context.insert(created)
                 if relationshipOperations.contains(.insert) {
                     try throwIfCancelled()
-                    if try await created.applyRelationships(
-                        payloadModel,
+                    if try await created._syncApplyRelationships(
+                        from: entry,
+                        keyStyle: keyStyle,
                         in: context,
                         operations: relationshipOperations
                     ) {
@@ -104,7 +106,7 @@ extension SwiftSync {
         }
     }
 
-    static func sync<Model: SyncUpdatableModel>(
+    static func sync<Model: SyncModelable>(
         item: [String: Any],
         as _: Model.Type,
         in context: ModelContext,
@@ -124,20 +126,30 @@ extension SwiftSync {
             var changed = false
 
             if let row = existing.first(where: { identityKey(from: $0[keyPath: Model.syncIdentity]) == key }) {
-                if try row.apply(payloadModel) { changed = true }
+                if try row._syncApply(from: item, keyStyle: keyStyle) { changed = true }
                 if !relationshipOperations.isDisjoint(with: [.update, .delete]) {
                     try throwIfCancelled()
-                    if try await row.applyRelationships(payloadModel, in: context, operations: relationshipOperations) {
+                    if try await row._syncApplyRelationships(
+                        from: item,
+                        keyStyle: keyStyle,
+                        in: context,
+                        operations: relationshipOperations
+                    ) {
                         changed = true
                     }
                     try throwIfCancelled()
                 }
             } else {
-                let created = try Model.make(from: payloadModel)
+                let created = try Model._syncMake(from: item, keyStyle: keyStyle)
                 context.insert(created)
                 if relationshipOperations.contains(.insert) {
                     try throwIfCancelled()
-                    if try await created.applyRelationships(payloadModel, in: context, operations: relationshipOperations) {
+                    if try await created._syncApplyRelationships(
+                        from: item,
+                        keyStyle: keyStyle,
+                        in: context,
+                        operations: relationshipOperations
+                    ) {
                         changed = true
                     }
                     try throwIfCancelled()
@@ -159,7 +171,7 @@ extension SwiftSync {
         }
     }
 
-    static func sync<Model: SyncUpdatableModel, Parent: PersistentModel>(
+    static func sync<Model: SyncModelable, Parent: PersistentModel>(
         item: [String: Any],
         as _: Model.Type,
         in context: ModelContext,
@@ -190,21 +202,31 @@ extension SwiftSync {
             var changed = false
 
             if let row = scopeRows.first(where: { identityKey(from: $0[keyPath: Model.syncIdentity]) == key }) {
-                if try row.apply(payloadModel) { changed = true }
+                if try row._syncApply(from: item, keyStyle: keyStyle) { changed = true }
                 if !relationshipOperations.isDisjoint(with: [.update, .delete]) {
                     try throwIfCancelled()
-                    if try await row.applyRelationships(payloadModel, in: context, operations: relationshipOperations) {
+                    if try await row._syncApplyRelationships(
+                        from: item,
+                        keyStyle: keyStyle,
+                        in: context,
+                        operations: relationshipOperations
+                    ) {
                         changed = true
                     }
                     try throwIfCancelled()
                 }
             } else {
-                let created = try Model.make(from: payloadModel)
+                let created = try Model._syncMake(from: item, keyStyle: keyStyle)
                 created[keyPath: relationship] = resolvedParent
                 context.insert(created)
                 if relationshipOperations.contains(.insert) {
                     try throwIfCancelled()
-                    if try await created.applyRelationships(payloadModel, in: context, operations: relationshipOperations) {
+                    if try await created._syncApplyRelationships(
+                        from: item,
+                        keyStyle: keyStyle,
+                        in: context,
+                        operations: relationshipOperations
+                    ) {
                         changed = true
                     }
                     try throwIfCancelled()
@@ -226,7 +248,7 @@ extension SwiftSync {
         }
     }
 
-    static func sync<Model: SyncUpdatableModel, Parent: PersistentModel>(
+    static func sync<Model: SyncModelable, Parent: PersistentModel>(
         payload: [Any],
         as _: Model.Type,
         in context: ModelContext,
@@ -247,7 +269,7 @@ extension SwiftSync {
         )
     }
 
-    private static func sync<Model: SyncUpdatableModel, Parent: PersistentModel>(
+    private static func sync<Model: SyncModelable, Parent: PersistentModel>(
         payload: [Any],
         as _: Model.Type,
         in context: ModelContext,
@@ -330,13 +352,14 @@ extension SwiftSync {
                         row[keyPath: parentRelationship] = resolvedParent
                         changed = true
                     }
-                    if try row.apply(payloadModel) {
+                    if try row._syncApply(from: entry, keyStyle: keyStyle) {
                         changed = true
                     }
                     if !relationshipOperations.isDisjoint(with: [.update, .delete]) {
                         try throwIfCancelled()
-                        if try await row.applyRelationships(
-                            payloadModel,
+                        if try await row._syncApplyRelationships(
+                            from: entry,
+                            keyStyle: keyStyle,
                             in: context,
                             operations: relationshipOperations
                         ) {
@@ -347,13 +370,14 @@ extension SwiftSync {
                     continue
                 }
 
-                let created = try Model.make(from: payloadModel)
+                let created = try Model._syncMake(from: entry, keyStyle: keyStyle)
                 created[keyPath: parentRelationship] = resolvedParent
                 context.insert(created)
                 if relationshipOperations.contains(.insert) {
                     try throwIfCancelled()
-                    if try await created.applyRelationships(
-                        payloadModel,
+                    if try await created._syncApplyRelationships(
+                        from: entry,
+                        keyStyle: keyStyle,
                         in: context,
                         operations: relationshipOperations
                     ) {

@@ -1,4 +1,4 @@
-@attached(extension, conformances: SyncUpdatableModel, names: named(SyncID), named(syncIdentity), named(syncIdentityRemoteKeys), named(syncDefaultRefreshModelTypes), named(syncRelatedModelType), named(syncRelationshipSchemaDescriptors), named(make), named(apply), named(applyRelationships), named(syncApplyGeneratedRelationships), named(exportObject), named(syncMarkChanged))
+@attached(extension, conformances: SyncModelable, names: named(SyncID), named(syncIdentity), named(syncIdentityRemoteKeys), named(syncDefaultRefreshModelTypes), named(syncRelatedModelType), named(syncRelationshipSchemaDescriptors), named(_syncMake), named(_syncApply), named(_syncApplyRelationships), named(syncApplyGeneratedRelationships), named(_syncExportObject), named(syncMarkChanged))
 public macro Syncable() = #externalMacro(module: "MacrosImplementation", type: "SyncableMacro")
 
 @attached(peer)

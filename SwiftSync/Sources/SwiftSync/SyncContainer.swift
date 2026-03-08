@@ -77,7 +77,7 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         NotificationCenter.default.removeObserver(self)
     }
 
-    public func sync<Model: SyncUpdatableModel>(
+    public func sync<Model: SyncModelable>(
         payload: [Any],
         as model: Model.Type,
         relationshipOperations: SyncRelationshipOperations = .all
@@ -92,7 +92,7 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         )
     }
 
-    public func sync<Model: SyncUpdatableModel, Parent: PersistentModel>(
+    public func sync<Model: SyncModelable, Parent: PersistentModel>(
         payload: [Any],
         as model: Model.Type,
         parent: Parent,
@@ -111,7 +111,7 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         )
     }
 
-    public func sync<Model: SyncUpdatableModel>(
+    public func sync<Model: SyncModelable>(
         item: [String: Any],
         as model: Model.Type,
         relationshipOperations: SyncRelationshipOperations = .all
@@ -126,7 +126,7 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         )
     }
 
-    public func sync<Model: SyncUpdatableModel, Parent: PersistentModel>(
+    public func sync<Model: SyncModelable, Parent: PersistentModel>(
         item: [String: Any],
         as model: Model.Type,
         parent: Parent,
@@ -145,7 +145,7 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         )
     }
 
-    public func export<Model: SyncUpdatableModel>(as _: Model.Type) throws -> [[String: Any]] {
+    public func export<Model: SyncModelable>(as _: Model.Type) throws -> [[String: Any]] {
         let context = ModelContext(modelContainer)
         let rows = try context.fetch(FetchDescriptor<Model>())
         let sorted = rows.sorted { lhs, rhs in
@@ -153,11 +153,11 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         }
 
         return sorted.map { row in
-            row.exportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
+            row._syncExportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
         }
     }
 
-    public func export<Model: SyncUpdatableModel & ParentScopedModel>(
+    public func export<Model: SyncModelable & ParentScopedModel>(
         as _: Model.Type,
         parent: Model.SyncParent
     ) throws -> [[String: Any]] {
@@ -169,7 +169,7 @@ public final class SyncContainer: NSObject, @unchecked Sendable {
         }
 
         return sorted.map { row in
-            row.exportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
+            row._syncExportObject(keyStyle: keyStyle, dateFormatter: dateFormatter)
         }
     }
 

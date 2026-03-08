@@ -1,32 +1,18 @@
 # State Capsule
 
 ## Plan
-- [x] Add failing tests for removing `ExportOptions` from export APIs.
-- [x] Replace `ExportOptions` with direct `keyStyle` + `dateFormatter` export parameters in core protocols and macro output.
-- [x] Update `SyncContainer` export implementation and defaults to no longer construct `ExportOptions`.
-- [x] Remove stale docs/references that still mention `ExportOptions` as runtime API.
-- [x] Run targeted and full `swift test`.
-- [x] Remove historical planning docs for deprecated export APIs.
-- [x] Align architecture/property-mapping docs with container-owned export and `keyStyle` naming.
+- [x] Add failing tests for the macro-only sync contract and removal of `SyncUpdatableModel` references.
+- [~] Replace `SyncUpdatableModel` protocol usage with a single `SyncModelable` runtime contract.
+- [ ] Make `SyncPayload` internal and route sync mapping through generated underscore runtime methods.
+- [ ] Update macro generation and test model conformances to the new runtime method names/signatures.
+- [ ] Update docs and planning notes to remove old public `make`/`apply` contract guidance.
+- [ ] Run targeted and full `swift test` and record final state.
 
 ## Last known state
-`swift test --filter ExportTests` and full `swift test` are green after removing `ExportOptions`.
+`swift test --filter ExportTests` fails as expected: `SyncModelable` has no `_syncExportObject` yet (`SyncExportTests.swift:208`).
 
 ## Decisions (don't revisit)
-- Standardize export configuration on `SyncContainer`; no backward compatibility for per-call export options in public API.
-- Remove `ExportOptions` entirely; export configuration is expressed as `keyStyle` + `dateFormatter` parameters internally and by container defaults.
-- Do not keep historical planning docs for removed export modes/options.
+- Collapse sync model API shape to one protocol contract and hide payload reader internals.
 
 ## Files touched
 - .agents/state.md
-- SwiftSync/Tests/SwiftSyncTests/SyncExportTests.swift
-- SwiftSync/Sources/SwiftSync/SyncContainer.swift
-- SwiftSync/Sources/SwiftSync/API.swift
-- README.md
-- docs/planning/demo-coverage-gap.md
-- SwiftSync/Sources/SwiftSync/Core.swift
-- SwiftSync/Sources/MacrosImplementation/SyncableMacro.swift
-- docs/project/property-mapping-contract.md
-- ARCHITECTURE.md
-- docs/planning/export-options-evaluation.md
-- docs/planning/export-nested-mode.md
