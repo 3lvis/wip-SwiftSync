@@ -31,11 +31,6 @@ struct TaskView: View {
         .animation(.snappy(duration: 0.2), value: reviewerIDs)
         .animation(.snappy(duration: 0.2), value: watcherIDs)
         .sheet(isPresented: $showingEditSheet) { editTaskSheet }
-        .onChange(of: showingEditSheet) { _, isPresented in
-            if !isPresented {
-                machine.send(.onAppear)
-            }
-        }
     }
 }
 
@@ -115,7 +110,6 @@ extension TaskView {
     var taskSection: some View {
         Section {
             if let taskModel = machine.task {
-                let authorName = taskModel.author?.displayName ?? machine.userDisplayName(for: taskModel.authorID) ?? "Unknown"
                 VStack(alignment: .leading, spacing: 12) {
                     Text(taskModel.title)
                         .font(.title2)
@@ -130,7 +124,7 @@ extension TaskView {
                             .background(Color.accentColor.opacity(0.15))
                             .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
-                        Text(authorName)
+                        Text(taskModel.author?.displayName ?? "Unknown")
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 10)
@@ -180,18 +174,15 @@ extension TaskView {
     @ViewBuilder
     var peopleSection: some View {
         if let taskModel = machine.task {
-            let assigneeName = taskModel.assignee?.displayName ?? machine.userDisplayName(for: taskModel.assigneeID)
             Section("Assignee") {
-                Text(assigneeName ?? "Unassigned")
-                    .foregroundStyle(assigneeName == nil ? .secondary : .primary)
+                Text(taskModel.assignee?.displayName ?? "Unassigned")
+                    .foregroundStyle(taskModel.assignee == nil ? .secondary : .primary)
                     .accessibilityIdentifier("task.assignee")
             }
 
             Section("Reviewers") {
                 if taskModel.reviewers.isEmpty {
-                    Text("None")
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("task.reviewers.empty")
+                    Text("None").foregroundStyle(.secondary)
                 } else {
                     ForEach(taskModel.reviewers.sorted { $0.displayName < $1.displayName }, id: \.id) { reviewer in
                         Text(reviewer.displayName)
@@ -201,9 +192,7 @@ extension TaskView {
 
             Section("Watchers") {
                 if taskModel.watchers.isEmpty {
-                    Text("None")
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier("task.watchers.empty")
+                    Text("None").foregroundStyle(.secondary)
                 } else {
                     ForEach(
                         taskModel.watchers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending },
