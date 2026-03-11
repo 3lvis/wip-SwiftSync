@@ -117,6 +117,7 @@ public final class ProjectDetailMachine {
     public private(set) var deleteState: SubmissionState = .idle
     public private(set) var project: Project?
     public private(set) var tasks: [Task] = []
+    public private(set) var users: [User] = []
     public var contentState: ProjectDetailContentState {
         resolveProjectDetailContentState(
             loadState: loadState,
@@ -132,6 +133,7 @@ public final class ProjectDetailMachine {
     private let syncEngine: DemoSyncEngine
     private let projectPublisher: SyncQueryPublisher<Project>
     private let taskPublisher: SyncQueryPublisher<Task>
+    private let userPublisher: SyncQueryPublisher<User>
     private let loadMachine: ScreenLoadMachine
     private let deleteMachine: SubmissionMachine
     public enum DeleteEvent {
@@ -157,6 +159,11 @@ public final class ProjectDetailMachine {
                 SortDescriptor(\Task.id)
             ]
         )
+        self.userPublisher = SyncQueryPublisher(
+            User.self,
+            in: syncContainer,
+            sortBy: [SortDescriptor(\User.displayName), SortDescriptor(\User.id)]
+        )
         self.loadMachine = ScreenLoadMachine { error in
             presentError(error, fallbackMessage: "Could not load this project yet.")
         }
@@ -169,6 +176,9 @@ public final class ProjectDetailMachine {
         }
         observeContinuously {
             self.tasks = self.taskPublisher.rows
+        }
+        observeContinuously {
+            self.users = self.userPublisher.rows
         }
         observeContinuously {
             self.loadState = self.loadMachine.state
@@ -207,6 +217,11 @@ public final class ProjectDetailMachine {
         }
     }
 
+    public func userDisplayName(for id: String?) -> String? {
+        guard let id else { return nil }
+        return users.first(where: { $0.id == id })?.displayName
+    }
+
 }
 
 @MainActor
@@ -215,6 +230,7 @@ public final class TaskDetailMachine {
     public private(set) var loadState: ScreenLoadState = .idle
     public private(set) var task: Task?
     public private(set) var items: [Item] = []
+    public private(set) var users: [User] = []
     public var contentState: TaskDetailContentState {
         resolveTaskDetailContentState(loadState: loadState, hasTask: task != nil)
     }
@@ -225,6 +241,7 @@ public final class TaskDetailMachine {
     private let taskID: String
     private let syncEngine: DemoSyncEngine
     private let taskPublisher: SyncModelPublisher<Task>
+    private let userPublisher: SyncQueryPublisher<User>
     private let itemPublisher: SyncQueryPublisher<Item>
     private let loadMachine: ScreenLoadMachine
     public init(taskID: String, syncContainer: SyncContainer, syncEngine: DemoSyncEngine) {
@@ -234,6 +251,11 @@ public final class TaskDetailMachine {
             Task.self,
             id: taskID,
             in: syncContainer,
+        )
+        self.userPublisher = SyncQueryPublisher(
+            User.self,
+            in: syncContainer,
+            sortBy: [SortDescriptor(\User.displayName), SortDescriptor(\User.id)]
         )
         self.itemPublisher = SyncQueryPublisher(
             Item.self,
@@ -250,6 +272,9 @@ public final class TaskDetailMachine {
             self.task = self.taskPublisher.row
         }
         observeContinuously {
+            self.users = self.userPublisher.rows
+        }
+        observeContinuously {
             self.items = self.itemPublisher.rows
         }
         observeContinuously {
@@ -261,6 +286,11 @@ public final class TaskDetailMachine {
         loadMachine.send(event, run: { [syncEngine, taskID] in
             try await syncEngine.syncTaskDetail(taskID: taskID)
         })
+    }
+
+    public func userDisplayName(for id: String?) -> String? {
+        guard let id else { return nil }
+        return users.first(where: { $0.id == id })?.displayName
     }
 }
 

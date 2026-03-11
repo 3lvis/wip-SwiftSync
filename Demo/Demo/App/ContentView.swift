@@ -1,6 +1,5 @@
 import SwiftUI
 import DemoCore
-import Observation
 import SwiftSync
 
 struct ContentView: View {

@@ -163,6 +163,7 @@ struct ProjectView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(machine.tasks, id: \.id) { task in
+                    let assigneeName = task.assignee?.displayName ?? machine.userDisplayName(for: task.assigneeID)
                     NavigationLink {
                         TaskView(taskID: task.id, syncContainer: syncContainer, syncEngine: syncEngine)
                     } label: {
@@ -176,11 +177,12 @@ struct ProjectView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
 
-                                if let assignee = task.assignee?.displayName {
-                                    Text("Assignee: \(assignee)")
+                                if let assigneeName {
+                                    Text("Assignee: \(assigneeName)")
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
+                                        .accessibilityIdentifier("project.task.\(task.id).assignee")
                                 }
 
                                 if !task.items.isEmpty {

@@ -31,8 +31,26 @@ private enum DemoUITestPlan {
 private enum DemoSeedUserID {
     static let noahKim = "C3E7A1B2-2001-0000-0000-000000000002"
     static let miaPatel = "C3E7A1B2-2001-0000-0000-000000000003"
+    static let liamBrown = "C3E7A1B2-2001-0000-0000-000000000004"
     static let sofiaGarcia = "C3E7A1B2-2001-0000-0000-000000000005"
     static let ethanLee = "C3E7A1B2-2001-0000-0000-000000000006"
+}
+
+private enum DemoSeedProjectTitle {
+    static let accountSecurity = "Account Security Controls"
+    static let notificationsReliability = "Team Notifications Reliability"
+}
+
+private enum DemoSeedTaskTitle {
+    static let sessionTimeout = "Add session timeout controls to account settings"
+    static let qaItemList = "Write QA item list for forced re-auth scenarios"
+    static let duplicatePushFix = "Fix duplicate push preference sync after reconnect"
+    static let scopedDeleteVerify = "Verify scoped delete behavior for removed notification channels"
+    static let incidentPlaybook = "Draft incident playbook for notification delivery degradation"
+}
+
+private enum DemoSeedTaskID {
+    static let incidentPlaybook = "C3E7A1B2-3001-0000-0000-000000000009"
 }
 
 final class DemoUITests: XCTestCase {
@@ -69,8 +87,8 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Account Security Controls",
-            taskTitle: "Add session timeout controls to account settings"
+            projectTitle: DemoSeedProjectTitle.accountSecurity,
+            taskTitle: DemoSeedTaskTitle.sessionTimeout
         )
 
         openEditTaskForm(app)
@@ -91,7 +109,7 @@ final class DemoUITests: XCTestCase {
         let createdTitle = uniqueTitle(prefix: "UI Created Task")
 
         app.launch()
-        openProject(app, title: "Account Security Controls")
+        openProject(app, title: DemoSeedProjectTitle.accountSecurity)
 
         openCreateTaskForm(app)
 
@@ -119,8 +137,8 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Account Security Controls",
-            taskTitle: "Write QA item list for forced re-auth scenarios"
+            projectTitle: DemoSeedProjectTitle.accountSecurity,
+            taskTitle: DemoSeedTaskTitle.qaItemList
         )
 
         openEditTaskForm(app)
@@ -144,8 +162,8 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Team Notifications Reliability",
-            taskTitle: "Fix duplicate push preference sync after reconnect"
+            projectTitle: DemoSeedProjectTitle.notificationsReliability,
+            taskTitle: DemoSeedTaskTitle.duplicatePushFix
         )
 
         openEditTaskForm(app)
@@ -164,55 +182,154 @@ final class DemoUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
     }
 
-    // TODO: User journey: remove work safely.
-    // Purpose:
-    // - prove destructive mutation through the sync layer
-    // - prove the scoped project list refreshes after delete
-    //
-    // @MainActor
-    // func testDeleteTaskFromProject() throws {}
+    @MainActor
+    func testDeleteTaskFromProject() throws {
+        let app = configuredApp()
 
-    // TODO: Edge journey: cancel create.
-    // Purpose:
-    // - prove leaving the create form does not persist partial draft data
-    //
-    // @MainActor
-    // func testCancelCreateDoesNotPersistTask() throws {}
+        app.launch()
+        openProject(app, title: DemoSeedProjectTitle.notificationsReliability)
 
-    // TODO: Edge journey: cancel edit.
-    // Purpose:
-    // - prove leaving the edit form does not mutate the original task
-    //
-    // @MainActor
-    // func testCancelEditKeepsOriginalTaskValues() throws {}
+        revealDeleteForTask(app, taskTitle: DemoSeedTaskTitle.scopedDeleteVerify)
+        confirmDeleteAlert(app)
 
-    // TODO: Edge journey: normalize empty description.
-    // Purpose:
-    // - prove clearing description content saves as "No description yet."
-    //
-    // @MainActor
-    // func testEditTaskNormalizesEmptyDescription() throws {}
+        XCTAssertFalse(app.staticTexts[DemoSeedTaskTitle.scopedDeleteVerify].waitForExistence(timeout: 2))
 
-    // TODO: Edge journey: assign the seeded unassigned task.
-    // Purpose:
-    // - prove unassigned -> assigned transitions render correctly in task detail
-    //
-    // @MainActor
-    // func testAssignUnassignedTask() throws {}
+        goBack(app)
+        XCTAssertTrue(app.staticTexts["3 tasks"].waitForExistence(timeout: 10))
+    }
 
-    // TODO: Edge journey: remove all reviewers or watchers.
-    // Purpose:
-    // - prove relationship clearing persists and task detail falls back to "None"
-    //
-    // @MainActor
-    // func testClearTaskReviewersOrWatchers() throws {}
+    @MainActor
+    func testCancelCreateDoesNotPersistTask() throws {
+        let app = configuredApp()
+        let abandonedTitle = uniqueTitle(prefix: "UI Cancel Create")
 
-    // TODO: Edge journey: cancel delete at the confirmation alert.
-    // Purpose:
-    // - prove destructive intent is not applied unless confirmed
-    //
-    // @MainActor
-    // func testCancelDeleteKeepsTask() throws {}
+        app.launch()
+        openProject(app, title: DemoSeedProjectTitle.accountSecurity)
+        openCreateTaskForm(app)
+
+        replaceText(in: app.textViews["task-form.title"], with: abandonedTitle, app: app)
+        app.buttons["task-form.cancel"].tap()
+
+        XCTAssertTrue(app.staticTexts["Tasks"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[abandonedTitle].exists)
+    }
+
+    @MainActor
+    func testCancelEditKeepsOriginalTaskValues() throws {
+        let app = configuredApp()
+        let attemptedTitle = uniqueTitle(prefix: "UI Cancel Edit")
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: DemoSeedProjectTitle.accountSecurity,
+            taskTitle: DemoSeedTaskTitle.sessionTimeout
+        )
+
+        openEditTaskForm(app)
+        replaceText(in: app.textViews["task-form.title"], with: attemptedTitle, app: app)
+        app.buttons["task-form.cancel"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.title"].label, DemoSeedTaskTitle.sessionTimeout)
+
+        goBack(app)
+        XCTAssertTrue(app.staticTexts[DemoSeedTaskTitle.sessionTimeout].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts[attemptedTitle].exists)
+    }
+
+    @MainActor
+    func testEditTaskNormalizesEmptyDescription() throws {
+        let app = configuredApp()
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: DemoSeedProjectTitle.accountSecurity,
+            taskTitle: DemoSeedTaskTitle.sessionTimeout
+        )
+
+        openEditTaskForm(app)
+        replaceText(in: app.textViews["task-form.description"], with: " ", app: app)
+        app.buttons["task-form.save"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.description"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.description"].label, "No description yet.")
+    }
+
+    @MainActor
+    func testAssignUnassignedTask() throws {
+        let app = configuredApp()
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: DemoSeedProjectTitle.notificationsReliability,
+            taskTitle: DemoSeedTaskTitle.incidentPlaybook
+        )
+
+        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
+
+        openEditTaskForm(app)
+        let assigneeButton = app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"]
+        tapAfterScrolling(assigneeButton, in: app)
+        XCTAssertTrue(waitForValue("selected", on: assigneeButton))
+        app.buttons["task-form.save"].tap()
+
+        XCTAssertTrue(waitForNonExistence(app.buttons["task-form.save"]))
+        XCTAssertTrue(waitForLabel("Mia Patel", on: app.staticTexts["task.assignee"]))
+
+        goBack(app)
+        XCTAssertTrue(app.staticTexts[DemoSeedTaskTitle.incidentPlaybook].waitForExistence(timeout: 10))
+        app.staticTexts[DemoSeedTaskTitle.incidentPlaybook].tap()
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForLabel("Mia Patel", on: app.staticTexts["task.assignee"]))
+    }
+
+    @MainActor
+    func testClearTaskReviewersOrWatchers() throws {
+        let app = configuredApp()
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: DemoSeedProjectTitle.notificationsReliability,
+            taskTitle: DemoSeedTaskTitle.incidentPlaybook
+        )
+
+        XCTAssertTrue(app.staticTexts["Liam Brown"].exists)
+        XCTAssertTrue(scrollUntilVisible(app.staticTexts["Noah Kim"], in: app))
+        XCTAssertTrue(scrollUntilVisible(app.staticTexts["Ethan Lee"], in: app))
+
+        openEditTaskForm(app)
+        tapAfterScrolling(app.buttons["task-form.reviewer.\(DemoSeedUserID.liamBrown)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.noahKim)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
+        app.buttons["task-form.save"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(scrollUntilVisible(app.staticTexts["task.reviewers.empty"], in: app))
+        XCTAssertTrue(scrollUntilVisible(app.staticTexts["task.watchers.empty"], in: app))
+        XCTAssertFalse(app.staticTexts["Liam Brown"].exists)
+        XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
+        XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
+    }
+
+    @MainActor
+    func testCancelDeleteKeepsTask() throws {
+        let app = configuredApp()
+
+        app.launch()
+        openProject(app, title: DemoSeedProjectTitle.notificationsReliability)
+
+        revealDeleteForTask(app, taskTitle: DemoSeedTaskTitle.scopedDeleteVerify)
+        cancelDeleteAlert(app)
+
+        XCTAssertTrue(app.staticTexts[DemoSeedTaskTitle.scopedDeleteVerify].waitForExistence(timeout: 10))
+        app.staticTexts[DemoSeedTaskTitle.scopedDeleteVerify].tap()
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.title"].label, DemoSeedTaskTitle.scopedDeleteVerify)
+    }
 
     // TODO: Failure journey: empty project list.
     // Purpose:
@@ -232,12 +349,19 @@ final class DemoUITests: XCTestCase {
     // @MainActor
     // func testBrowseProjectWithNoTasks() throws {}
 
-    // TODO: Failure journey: task with no items.
-    // Purpose:
-    // - prove empty task-detail checklist state is rendered clearly
-    //
-    // @MainActor
-    // func testOpenTaskWithNoItems() throws {}
+    @MainActor
+    func testOpenTaskWithNoItems() throws {
+        let app = configuredApp()
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: DemoSeedProjectTitle.notificationsReliability,
+            taskTitle: DemoSeedTaskTitle.incidentPlaybook
+        )
+
+        XCTAssertTrue(app.staticTexts["No items"].waitForExistence(timeout: 10))
+    }
 
     // TODO: Failure journey: save failure.
     // Purpose:
@@ -306,10 +430,71 @@ private extension DemoUITests {
         XCTAssertTrue(app.buttons["task-form.save"].waitForExistence(timeout: 10))
     }
 
+    func revealDeleteForTask(_ app: XCUIApplication, taskTitle: String) {
+        let taskCellLabel = app.staticTexts[taskTitle]
+        XCTAssertTrue(taskCellLabel.waitForExistence(timeout: 10))
+        taskCellLabel.swipeLeft()
+        XCTAssertTrue(app.buttons["Delete"].waitForExistence(timeout: 10))
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(app.alerts["Delete Task?"].waitForExistence(timeout: 10))
+    }
+
+    func confirmDeleteAlert(_ app: XCUIApplication) {
+        let alert = app.alerts["Delete Task?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 10))
+        alert.buttons["Delete"].tap()
+    }
+
+    func cancelDeleteAlert(_ app: XCUIApplication) {
+        let alert = app.alerts["Delete Task?"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 10))
+        alert.buttons["Cancel"].tap()
+    }
+
     func waitUntilEnabled(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
         let predicate = NSPredicate(format: "enabled == true")
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
         return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    func waitForLabel(_ label: String, on element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let predicate = NSPredicate(format: "label == %@", label)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    func waitForValue(_ value: String, on element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let predicate = NSPredicate(format: "value == %@", value)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    func waitForNonExistence(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let predicate = NSPredicate(format: "exists == false")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    func scrollUntilVisible(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) -> Bool {
+        if element.exists && element.isHittable {
+            return true
+        }
+
+        for _ in 0..<maxSwipes {
+            if app.tables.firstMatch.exists {
+                app.tables.firstMatch.swipeUp()
+            } else if app.scrollViews.firstMatch.exists {
+                app.scrollViews.firstMatch.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+
+            if element.exists && element.isHittable {
+                return true
+            }
+        }
+
+        return element.exists
     }
 
     func tapAfterScrolling(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) {
