@@ -325,6 +325,7 @@ extension TaskFormSheet {
                     }
                 }
                 .accessibilityIdentifier("task-form.assignee.unassigned")
+                .accessibilityValue(draft.assigneeID == nil ? "selected" : "unselected")
                 ForEach(machine.users, id: \.id) { user in
                     Button {
                         draft.assigneeID = user.id
@@ -338,6 +339,7 @@ extension TaskFormSheet {
                         }
                     }
                     .accessibilityIdentifier("task-form.assignee.\(user.id)")
+                    .accessibilityValue(draft.assigneeID == user.id ? "selected" : "unselected")
                 }
             case .unavailable:
                 Text("Unavailable")

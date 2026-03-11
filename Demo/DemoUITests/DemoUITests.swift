@@ -49,6 +49,10 @@ private enum DemoSeedTaskTitle {
     static let incidentPlaybook = "Draft incident playbook for notification delivery degradation"
 }
 
+private enum DemoSeedTaskID {
+    static let incidentPlaybook = "C3E7A1B2-3001-0000-0000-000000000009"
+}
+
 final class DemoUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -267,14 +271,19 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
 
         openEditTaskForm(app)
-        tapAfterScrolling(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
+        let assigneeButton = app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"]
+        tapAfterScrolling(assigneeButton, in: app)
+        XCTAssertTrue(waitForValue("selected", on: assigneeButton))
         app.buttons["task-form.save"].tap()
 
-        XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+        XCTAssertTrue(waitForNonExistence(app.buttons["task-form.save"]))
+        XCTAssertTrue(waitForLabel("Mia Patel", on: app.staticTexts["task.assignee"]))
 
         goBack(app)
-        XCTAssertTrue(app.staticTexts["Assignee: Mia Patel"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[DemoSeedTaskTitle.incidentPlaybook].waitForExistence(timeout: 10))
+        app.staticTexts[DemoSeedTaskTitle.incidentPlaybook].tap()
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForLabel("Mia Patel", on: app.staticTexts["task.assignee"]))
     }
 
     @MainActor
@@ -450,6 +459,18 @@ private extension DemoUITests {
 
     func waitForLabel(_ label: String, on element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
         let predicate = NSPredicate(format: "label == %@", label)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    func waitForValue(_ value: String, on element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let predicate = NSPredicate(format: "value == %@", value)
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    func waitForNonExistence(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let predicate = NSPredicate(format: "exists == false")
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
         return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }

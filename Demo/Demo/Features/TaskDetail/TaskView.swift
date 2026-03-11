@@ -31,6 +31,11 @@ struct TaskView: View {
         .animation(.snappy(duration: 0.2), value: reviewerIDs)
         .animation(.snappy(duration: 0.2), value: watcherIDs)
         .sheet(isPresented: $showingEditSheet) { editTaskSheet }
+        .onChange(of: showingEditSheet) { _, isPresented in
+            if !isPresented {
+                machine.send(.onAppear)
+            }
+        }
     }
 }
 
