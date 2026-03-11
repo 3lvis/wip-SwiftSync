@@ -97,6 +97,7 @@ Be cautious with:
 Rule:
 
 - diagnostics must be consumable by the failing test or run, not just emitted somewhere
+- improving diagnostic transport is often more important than improving log wording
 
 ## 5. Use the best execution environment available
 
@@ -142,7 +143,25 @@ Important:
 
 A non-reproducing lower-level test narrows the search space. That is progress, not wasted effort.
 
-## 7. Keep investigation branches separate from clean fix branches
+## 7. Separate product bugs from test-surface bugs
+
+Not every failure in a test means the product layer is wrong.
+
+Sometimes the product is correct, but the test surface is unstable:
+
+- a brittle accessibility contract
+- an incidental view-tree structure
+- a framework-generated wrapper element
+- an assertion against a surface users do not actually depend on
+
+Treat these as different problems:
+
+- product bug: the user-visible state is wrong
+- test-surface bug: the test is reading the wrong or unstable surface
+
+Do not change production behavior to compensate for a weak or incidental test surface unless that surface is itself part of the product contract.
+
+## 8. Keep investigation branches separate from clean fix branches
 
 Bug work often needs messy experiments:
 
@@ -161,7 +180,7 @@ Then, once the likely cause is known:
 
 This prevents the final branch from becoming a scrapbook of the whole investigation.
 
-## 8. Treat the first working fix as provisional
+## 9. Treat the first working fix as provisional
 
 A first working fix is valuable because it:
 
@@ -184,7 +203,7 @@ with:
 
 - “the right layer was fixed”
 
-## 9. Use spy tests when the value is correct but dependents stay stale
+## 10. Use spy tests when the value is correct but dependents stay stale
 
 Some bugs are not about wrong data. They are about correct data not propagating.
 
@@ -205,7 +224,7 @@ from:
 
 - state itself never changed
 
-## 10. Prefer evidence about mechanism, not just outcome
+## 11. Prefer evidence about mechanism, not just outcome
 
 A good bug fix explanation should answer:
 
@@ -224,7 +243,20 @@ For example, “the field updated” is not enough. It is stronger to know wheth
 - the view model updated but the view stayed stale
 - the UI query was brittle even though the product state was correct
 
-## 11. Keep UI tests focused on stable user contracts
+## 12. Reduce assertion surface when the test is noisy
+
+When a test is failing across several surfaces at once, reduce the number of things it is trying to prove.
+
+Do this to restore signal:
+
+- keep the most user-meaningful assertion
+- remove fragile secondary assertions
+- prove the core behavior first
+- re-expand the test only when the extra surface is stable and worth protecting
+
+This is not about weakening coverage permanently. It is about regaining a clear failure signal while the bug is being localized.
+
+## 13. Keep UI tests focused on stable user contracts
 
 When UI tests are involved, assert the behavior the user actually depends on.
 
@@ -244,7 +276,7 @@ Avoid depending on fragile surfaces unless they are the product contract:
 
 A UI test should prove the user journey, not the current implementation of the view tree.
 
-## 12. Let the final fix remove the workaround when possible
+## 14. Let the final fix remove the workaround when possible
 
 If an early workaround was needed during investigation, ask whether the deeper fix makes it unnecessary.
 
@@ -258,7 +290,24 @@ The ideal end state is:
 
 That is much stronger than leaving the workaround in place and calling it done.
 
-## 13. Merge the clean solution, not the whole investigation
+## 15. Make temporary diagnostics removable in one pass
+
+Investigation code is often necessary:
+
+- extra logging
+- trace capture
+- temporary assertions
+- probe hooks
+
+But it should be designed for removal:
+
+- put it behind a narrow seam
+- keep it local to the investigation target
+- avoid spreading it through unrelated layers
+
+If cleanup is painful, the diagnostics were too entangled with production behavior.
+
+## 16. Merge the clean solution, not the whole investigation
 
 Before merging:
 
@@ -287,18 +336,21 @@ They should not have to sort through every failed idea explored on the way there
 5. Run one focused scenario at a time.
 6. Try to isolate the failure into the narrowest plausible layer.
 7. Treat negative-result tests as evidence.
-8. Use an investigation branch for messy work.
-9. Once the likely cause is known, branch cleanly from base.
-10. Rebuild only the proven fix.
-11. Ask whether the fix belongs deeper.
-12. Add or keep the tests that prove both behavior and mechanism.
-13. Remove temporary investigation residue.
-14. Merge the clean, verified solution.
+8. Separate product bugs from test-surface bugs.
+9. Use an investigation branch for messy work.
+10. Once the likely cause is known, branch cleanly from base.
+11. Rebuild only the proven fix.
+12. Ask whether the fix belongs deeper.
+13. Reduce assertion surface if the test is noisy.
+14. Add or keep the tests that prove both behavior and mechanism.
+15. Remove temporary investigation residue.
+16. Merge the clean, verified solution.
 
 ## What this playbook is trying to prevent
 
 - coding from hunches
 - weakening tests instead of understanding failures
+- treating an unstable test surface as a product defect
 - stopping at the first workaround
 - merging noisy investigation history as if it were a clean fix
 - confusing a UI symptom with a lower-layer root cause
