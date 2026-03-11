@@ -214,16 +214,11 @@ final class DemoUITests: XCTestCase {
     // @MainActor
     // func testCancelDeleteKeepsTask() throws {}
 
-    // TODO: Edge journey: repeat the same edit flow twice.
-    // Purpose:
-    // - prove repeated saves continue to propagate correctly
-    //
-    // @MainActor
-    // func testRepeatedTaskEditFlow() throws {}
-
     // TODO: Failure journey: empty project list.
     // Purpose:
     // - prove the app communicates there is no work yet
+    // Harness:
+    // - launch with a UI-test-specific empty seed instead of the canonical seeded data
     //
     // @MainActor
     // func testBrowseWorkWithEmptyProjectList() throws {}
@@ -231,6 +226,8 @@ final class DemoUITests: XCTestCase {
     // TODO: Failure journey: empty project tasks.
     // Purpose:
     // - prove a project with no tasks renders its scoped empty state clearly
+    // Harness:
+    // - add one seeded project with no tasks to the UI-test fixture
     //
     // @MainActor
     // func testBrowseProjectWithNoTasks() throws {}
@@ -245,6 +242,8 @@ final class DemoUITests: XCTestCase {
     // TODO: Failure journey: save failure.
     // Purpose:
     // - prove failed writes leave the form open and show a clear error
+    // Harness:
+    // - inject a UI-test engine/API behavior that fails the next task mutation while preserving reads
     //
     // @MainActor
     // func testEditTaskSaveFailure() throws {}
@@ -252,16 +251,20 @@ final class DemoUITests: XCTestCase {
     // TODO: Failure journey: delete failure.
     // Purpose:
     // - prove failed deletes keep the task visible and show a clear error
+    // Harness:
+    // - inject a UI-test engine/API behavior that fails task delete while preserving reads
     //
     // @MainActor
     // func testDeleteTaskFailure() throws {}
 
-    // TODO: Failure journey: offline or slow browsing/editing.
+    // TODO: Failure journey: edit while offline.
     // Purpose:
-    // - prove the demo communicates loading and failure states during realistic use
+    // - prove an edit attempted after switching the demo to Offline stays on the form and shows a clear error
+    // Harness:
+    // - either switch the in-app scenario picker to Offline after the initial load or launch directly into Offline for a dedicated failure path
     //
     // @MainActor
-    // func testBrowseOrEditUnderOfflineOrSlowConditions() throws {}
+    // func testEditTaskWhileOfflineShowsFailure() throws {}
 }
 
 private extension DemoUITests {
