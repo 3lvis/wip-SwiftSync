@@ -36,6 +36,8 @@
 - Avoid inferring behavior from implementation details in tests; test expected contract.
 - Keep diagnostics explicit and actionable when behavior cannot be resolved safely.
 - For performance work, always record a before-change baseline on the same benchmark or profiling command before implementing the optimization, then re-run the same measurement after the change.
+- When a bug appears and the correct fix is not yet known, follow `docs/project/bug-solving-playbook.md`.
+- If a new bug is discovered while working on a base or integration branch, move that investigation onto a dedicated branch before debugging further.
 
 ## docs/planning Rules
 
