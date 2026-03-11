@@ -1,365 +1,217 @@
 # Bug-Solving Playbook
 
-This document describes how to work when a real bug appears and the right fix is not yet obvious.
+This document defines the standard way to work when a real bug appears and the right fix is not yet known.
 
-The goal is to make bug work:
+The method is:
 
-- evidence-driven
-- branch-safe
-- collaborative
-- test-guided
-- clean at merge time
+- start from behavior, not theory
+- locate the first wrong state
+- prove the failing layer
+- rebuild the cleanest fix from base
+- merge the smallest verified solution
 
-## Core stance
+## Principles
 
-- Start from observed behavior, not theories.
 - Do not fix from instinct.
-- Find the first wrong state before changing code.
-- Prefer the deepest correct fix, but earn that conclusion with evidence.
-- Keep the final diff cleaner than the investigation.
+- Do not argue from symptoms alone.
+- Do not stop at the first workaround.
+- Prefer the deepest correct fix, but only after proving the layer.
+- Keep the final branch cleaner than the investigation.
 
-## 1. Reproduce the real bug first
+## Phase 1: Establish the bug
 
-Before discussing causes or fixes:
+Start with the real failure.
 
-- reproduce the user-visible failure
-- describe the exact flow
-- identify the expected result
-- identify the actual result
+- Reproduce the bug in the actual user flow.
+- State the expected result.
+- State the actual result.
+- Describe the bug in behavioral terms, not implementation guesses.
 
-Write the bug in terms of behavior, not implementation.
+The first question is always:
 
-Good:
+- what should have changed, and what did not?
 
-- “Saving an edit leaves the detail screen stale.”
+## Phase 2: Localize the failure
 
-Weak:
-
-- “The publisher is probably broken.”
-
-## 2. Freeze the urge to patch
-
-When the bug is fresh, the first proposed fix is often just a guess.
-
-Do not immediately:
-
-- add reloads
-- add sleeps or waits
-- add retries
-- weaken assertions
-- move code until the symptom disappears
-
-Instead ask:
-
-- what state should have changed?
-- which layer owns that state?
-- how would we prove where it stopped changing?
-
-## 3. Trace the state transition end to end
-
-For any nontrivial bug, identify the full path the value takes.
+Map the state path from input to output.
 
 Typical path:
 
-- user input
+- user action
 - draft or transient state
 - exported payload
-- domain/service mutation
+- mutation/service layer
 - backend response
 - local persistence
-- reactive publishers
-- machine/view model state
-- final UI
+- reactive publisher
+- machine or view model
+- rendered UI
 
-The objective is simple:
+The goal is to find the first wrong state.
 
-- find the first place where reality diverges from expectation
+If the value is correct all the way down and only the UI is stale, that is a different bug from a bad write or a bad payload.
 
-If the value is correct all the way down and only the UI is stale, that is a different bug from a bad payload or a failed write.
+## Phase 3: Instrument the path
 
-## 4. Make logs useful to the failing run
+Add diagnostics before changing behavior.
 
-Logging only helps if the failing execution path can actually surface it.
+Diagnostics must be visible in the failing execution path.
 
-Choose a transport that the failure can expose reliably.
+Use transports the failing run can actually surface:
 
-Examples:
+- assertion-attached trace output
+- test-readable artifacts
+- narrow test-only diagnostic seams
 
-- test-readable files
-- assertion-attached diagnostic output
-- structured trace buffers
+Do not rely on diagnostics that the failing run cannot read.
 
-Be cautious with:
+Improving diagnostic transport is often more important than improving log wording.
 
-- stdout that never reaches the failing report
-- logging through the UI tree in ways that alter accessibility or idling
+## Phase 4: Use the right execution loop
 
-Rule:
+Use the strongest execution environment for the current question.
 
-- diagnostics must be consumable by the failing test or run, not just emitted somewhere
-- improving diagnostic transport is often more important than improving log wording
+- use local automated runs when they give the best signal
+- use Xcode when UI behavior is the question
+- use user-assisted manual runs when they expose the right logs faster or more reliably
 
-## 5. Use the best execution environment available
+This is one debugging loop, not separate modes of work:
 
-Not every failure is best investigated the same way.
+1. add narrow instrumentation
+2. run one focused scenario
+3. read the result
+4. update the hypothesis
 
-Sometimes:
+## Phase 5: Isolate the narrowest plausible layer
 
-- CLI tests are fastest
+Try to reproduce the bug in the narrowest layer that could realistically own it.
 
-Sometimes:
+That may be:
 
-- Xcode gives better UI or simulator signal
+- a unit test
+- a service or machine test
+- a publisher or observation test
+- an integration or UI test
 
-Sometimes:
+Start narrow, but do not force the wrong layer.
 
-- the user can run the exact failing flow more reliably and return the relevant logs
+A lower-level test that does not reproduce the bug is still useful evidence. It removes a layer from suspicion.
 
-This is normal.
+## Phase 6: Distinguish product bugs from test-surface bugs
 
-Use cooperation deliberately:
+A failing test does not always mean the product layer is wrong.
 
-- instrument narrowly
-- run one focused scenario
-- collect the result
-- update the hypothesis
-
-Do not treat manual collaboration as failure. Treat it as part of the debugging loop.
-
-## 6. Try to isolate the bug into the narrowest plausible layer
-
-After reproducing the bug, ask:
-
-- can this be captured in a unit test?
-- can it be captured in a service or machine test?
-- does it only exist in a view lifecycle or integration seam?
-
-Then try the narrowest plausible layer first.
-
-Important:
-
-- a passing isolation attempt is useful
-- a failing isolation attempt is also useful
-
-A non-reproducing lower-level test narrows the search space. That is progress, not wasted effort.
-
-## 7. Separate product bugs from test-surface bugs
-
-Not every failure in a test means the product layer is wrong.
-
-Sometimes the product is correct, but the test surface is unstable:
-
-- a brittle accessibility contract
-- an incidental view-tree structure
-- a framework-generated wrapper element
-- an assertion against a surface users do not actually depend on
-
-Treat these as different problems:
+Two different failure classes exist:
 
 - product bug: the user-visible state is wrong
-- test-surface bug: the test is reading the wrong or unstable surface
+- test-surface bug: the test is reading an unstable or incidental surface
 
-Do not change production behavior to compensate for a weak or incidental test surface unless that surface is itself part of the product contract.
+Do not change production behavior to compensate for a weak test surface unless that surface is itself part of the product contract.
 
-## 8. Keep investigation branches separate from clean fix branches
+For UI tests, assert the most stable user-meaningful surface, not the most local surface.
 
-Bug work often needs messy experiments:
+## Phase 7: Work in investigation branches, not on the final branch
+
+Investigation creates residue:
 
 - temporary logging
 - probe assertions
-- speculative test scaffolding
-- discarded ideas
+- discarded fixes
+- experimental tests
 
-Do that on an investigation branch.
+Do that work on an investigation branch.
 
-Then, once the likely cause is known:
+Once the likely cause is known:
 
 1. return to the clean base branch
 2. create a fresh branch
 3. rebuild only the proven fix
 
-This prevents the final branch from becoming a scrapbook of the whole investigation.
+Do not trim a messy branch into shape if rebuilding from base is cheaper and clearer.
 
-## 9. Treat the first working fix as provisional
+## Phase 8: Treat the first working fix as provisional
 
-A first working fix is valuable because it:
+A first working fix is useful because it proves the symptom can be corrected.
 
-- restores correct behavior
-- stabilizes the user journey
-- proves the symptom can be corrected
+It is not yet proof that the right layer was fixed.
 
-But after it works, ask:
+After a working fix, ask:
 
+- why did this fix work?
 - should this fix live here?
-- or is this layer compensating for a deeper defect?
+- is this layer compensating for a deeper defect?
 
-This is the point where discipline matters most.
+If the answer is unclear, continue the investigation.
 
-Do not confuse:
+## Phase 9: Use mechanism-level tests when state and reactivity diverge
 
-- “the symptom is gone”
+Some bugs are not about wrong final state. They are about correct state failing to propagate.
 
-with:
-
-- “the right layer was fixed”
-
-## 10. Use spy tests when the value is correct but dependents stay stale
-
-Some bugs are not about wrong data. They are about correct data not propagating.
-
-That is when spy tests are valuable.
-
-A good spy test records:
+When that happens, write tests that separate:
 
 - the underlying value
-- the notification or observation path
-- the sequence of transitions over time
+- the observation or notification path
 
-This helps distinguish:
+Spy tests are useful here because they show whether:
 
 - state mutation succeeded
-- observation delivery failed
+- dependents were notified
 
-from:
+That distinction is often the difference between a real root cause and a misleading symptom.
 
-- state itself never changed
+## Phase 10: Reduce noise while preserving the contract
 
-## 11. Prefer evidence about mechanism, not just outcome
+When a test is failing across multiple surfaces, reduce the assertion surface.
 
-A good bug fix explanation should answer:
+Keep only the assertions that prove the core user contract.
 
-- what failed?
-- why did it fail?
-- why does this fix address that mechanism?
+Do not keep fragile secondary assertions during localization if they hide the real signal.
 
-Not just:
+Once the bug is understood, expand coverage again only if the added assertions protect a stable contract.
 
-- what code changed?
+## Phase 11: Prefer the deeper fix when it is proven
 
-For example, “the field updated” is not enough. It is stronger to know whether:
+If a lower layer is shown to be wrong, fix that layer.
 
-- the publisher never reloaded
-- the publisher reloaded but did not notify dependents
-- the view model updated but the view stayed stale
-- the UI query was brittle even though the product state was correct
+A deeper fix is better when it:
 
-## 12. Reduce assertion surface when the test is noisy
+- explains the bug mechanically
+- removes an upper-layer workaround
+- is protected by a focused regression test
+- still keeps the user-facing regression test valuable
 
-When a test is failing across several surfaces at once, reduce the number of things it is trying to prove.
+Do not keep a workaround in place once the real lower-layer defect is understood and fixed.
 
-Do this to restore signal:
-
-- keep the most user-meaningful assertion
-- remove fragile secondary assertions
-- prove the core behavior first
-- re-expand the test only when the extra surface is stable and worth protecting
-
-This is not about weakening coverage permanently. It is about regaining a clear failure signal while the bug is being localized.
-
-## 13. Keep UI tests focused on stable user contracts
-
-When UI tests are involved, assert the behavior the user actually depends on.
-
-Prefer:
-
-- open item
-- perform action
-- navigate away
-- reopen
-- confirm the result persisted
-
-Avoid depending on fragile surfaces unless they are the product contract:
-
-- incidental accessibility tree structure
-- nested text nodes inside composite rows
-- timing-sensitive transient states
-
-A UI test should prove the user journey, not the current implementation of the view tree.
-
-## 14. Let the final fix remove the workaround when possible
-
-If an early workaround was needed during investigation, ask whether the deeper fix makes it unnecessary.
-
-The ideal end state is:
-
-- user flow passes
-- lower layer is correct
-- workaround is gone
-- lower-layer test proves the root cause
-- UI test still proves the user journey
-
-That is much stronger than leaving the workaround in place and calling it done.
-
-## 15. Make temporary diagnostics removable in one pass
-
-Investigation code is often necessary:
-
-- extra logging
-- trace capture
-- temporary assertions
-- probe hooks
-
-But it should be designed for removal:
-
-- put it behind a narrow seam
-- keep it local to the investigation target
-- avoid spreading it through unrelated layers
-
-If cleanup is painful, the diagnostics were too entangled with production behavior.
-
-## 16. Merge the clean solution, not the whole investigation
+## Phase 12: Merge the clean solution
 
 Before merging:
 
-- keep the tests that prove the cause and the behavior
+- keep the tests that prove the behavior
+- keep the tests that prove the mechanism, when needed
 - remove temporary diagnostics
-- remove abandoned assertions
-- remove superseded workaround code if the deeper fix replaces it
-- re-run focused verification on the clean branch
+- remove discarded probes and abandoned assertions
+- remove superseded workaround code
+- rerun focused verification on the clean branch
 
-The merged branch should look intentional.
-
-Anyone reading it later should see:
+The merged diff should show:
 
 - the problem
 - the right fix
 - the proof
 
-They should not have to sort through every failed idea explored on the way there.
+## Required workflow
 
-## Practical workflow
-
-1. Reproduce the bug in the real flow.
-2. Describe expected vs actual behavior.
+1. Reproduce the real bug.
+2. Define expected vs actual behavior.
 3. Map the state path across layers.
-4. Add diagnostics that the failing run can actually expose.
+4. Add diagnostics the failing run can surface.
 5. Run one focused scenario at a time.
-6. Try to isolate the failure into the narrowest plausible layer.
-7. Treat negative-result tests as evidence.
-8. Separate product bugs from test-surface bugs.
-9. Use an investigation branch for messy work.
-10. Once the likely cause is known, branch cleanly from base.
-11. Rebuild only the proven fix.
-12. Ask whether the fix belongs deeper.
-13. Reduce assertion surface if the test is noisy.
-14. Add or keep the tests that prove both behavior and mechanism.
-15. Remove temporary investigation residue.
-16. Merge the clean, verified solution.
-
-## What this playbook is trying to prevent
-
-- coding from hunches
-- weakening tests instead of understanding failures
-- treating an unstable test surface as a product defect
-- stopping at the first workaround
-- merging noisy investigation history as if it were a clean fix
-- confusing a UI symptom with a lower-layer root cause
-
-## What this playbook is trying to build
-
-- disciplined debugging
-- better collaboration during bug work
-- higher-quality regression tests
-- cleaner branches
-- deeper fixes when they are warranted
-- confidence at merge time
+6. Isolate the narrowest plausible layer.
+7. Separate product defects from test-surface defects.
+8. Use an investigation branch for messy work.
+9. Once the likely cause is known, branch cleanly from base.
+10. Rebuild only the proven fix.
+11. Ask whether the fix belongs deeper.
+12. Keep or add tests that prove both behavior and mechanism.
+13. Remove temporary investigation residue.
+14. Merge the clean, verified solution.
