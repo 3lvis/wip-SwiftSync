@@ -164,6 +164,35 @@ final class DemoUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
     }
 
+    @MainActor
+    func testAssignUnassignedTask() throws {
+        let app = configuredApp()
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: "Team Notifications Reliability",
+            taskTitle: "Draft incident playbook for notification delivery degradation"
+        )
+
+        XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
+
+        openEditTaskForm(app)
+        tapAfterScrolling(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
+        app.buttons["task-form.save"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+
+        goBack(app)
+        XCTAssertTrue(app.staticTexts["Draft incident playbook for notification delivery degradation"].waitForExistence(timeout: 10))
+        app.staticTexts["Draft incident playbook for notification delivery degradation"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+    }
+
     // TODO: User journey: remove work safely.
     // Purpose:
     // - prove destructive mutation through the sync layer
@@ -192,13 +221,6 @@ final class DemoUITests: XCTestCase {
     //
     // @MainActor
     // func testEditTaskNormalizesEmptyDescription() throws {}
-
-    // TODO: Edge journey: assign the seeded unassigned task.
-    // Purpose:
-    // - prove unassigned -> assigned transitions render correctly in task detail
-    //
-    // @MainActor
-    // func testAssignUnassignedTask() throws {}
 
     // TODO: Edge journey: remove all reviewers or watchers.
     // Purpose:

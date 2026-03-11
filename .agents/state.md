@@ -2,48 +2,48 @@
 
 ## Plan
 
-- [x] Add the four real journey tests for title edit, create, item edits, and people edits
-- [x] Add only the accessibility hooks needed to drive those journeys reliably
-- [x] Run the focused UI tests and required Demo app build, then update `.agents/state.md`
-- [x] Update the `DemoUITests.swift` roadmap to remove low-value coverage and document the agreed harness work for empty/failure cases
+- [x] Branch from `plan/demo-ui-integration-automation` into a fresh investigation branch
+- [x] Add instrumentation or spy-style tests to prove whether `SyncModelPublisher<Task>` emits during the real edit-save-dismiss flow
+- [x] Determine whether the gap is publisher delivery, relationship hydration timing, or SwiftUI lifecycle timing
+- [x] Decide whether the right permanent fix belongs in observation, model publishing, or the view layer
 
 ## Last known state
 
-Focused UI tests passed:
-- `xcodebuild -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,id=E8A7A5EE-68F6-4C30-952A-B75DF308E8D3' test -only-testing:DemoUITests/DemoUITests/testCreateTaskInsideProject`
-- `xcodebuild -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,id=E8A7A5EE-68F6-4C30-952A-B75DF308E8D3' test -only-testing:DemoUITests/DemoUITests/testUpdateTaskTitleKeepsProjectAndDetailInSync`
-- `xcodebuild -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,id=E8A7A5EE-68F6-4C30-952A-B75DF308E8D3' test -only-testing:DemoUITests/DemoUITests/testEditTaskItemsFlow`
-- `xcodebuild -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,id=E8A7A5EE-68F6-4C30-952A-B75DF308E8D3' test -only-testing:DemoUITests/DemoUITests/testEditTaskPeopleFlow`
-- `xcodebuild -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,id=E8A7A5EE-68F6-4C30-952A-B75DF308E8D3' build`
+Branch: `investigate/task-detail-publisher-refresh`
 
-Planning update completed; no new tests/builds run because this pass only changed roadmap comments.
+Reference minimal-fix commit on sibling branch:
+- `047c289` `Fix assignee detail refresh after edit dismiss`
+
+Known question:
+- `TaskDetailMachine` should ideally refresh from `SyncModelPublisher<Task>` without an explicit `.onChange(showingEditSheet)` reload in `TaskView`
+
+Current failing investigation test:
+- `swift test --package-path SwiftSync --filter SyncModelPublisherTests`
+
+Observed result:
+- `SyncModelPublisher.row` reaches the correct final assigned task state
+- observation tracking over `publisher.row` does not receive the update
+- spy values remain `[(nil, nil)]`
+- this points away from relationship hydration and toward observation delivery on `SyncModelPublisher`
+
+Current fix and verification:
+- `SyncModelPublisher.reload()` now uses `withMutation(keyPath: \.row) { _row = fetchedRow }`
+- reason: `@Observable` only auto-notifies object-typed properties on identity change; SwiftData was returning the same model instance with mutated fields
+- `swift test --package-path SwiftSync --filter SyncModelPublisherTests` now passes
+- `xcodebuild test -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,id=A40EFA3C-8E6A-40B2-9FF1-C4C1944B3CC7' -only-testing:DemoUITests/DemoUITests/testAssignUnassignedTask CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` now passes without the `TaskView` sheet-dismiss workaround
 
 ## Decisions (don't revisit)
 
-- Start with a docs-only planning pass before any implementation work because this task is explicitly to define the rollout
-- Split the automation roadmap into a baseline pass first and edge cases second to match the requested delivery shape
-- Use a deterministic UI-test-only runtime configuration so launch assertions do not depend on persisted local cache or ambient backend mutations
-- Keep the UI test target focused on maintained end-to-end coverage, not generated launch screenshots or placeholder performance tests
-- The planning doc should be anchored to the seeded canonical demo data and actual screen states, not generic CRUD wording
-- Making the Demo app intentionally easy to automate is in scope, including runtime and backend reshaping for deterministic UI states
-- Build harness pieces only when a concrete UI flow needs them; avoid speculative test infrastructure
-- The next planning layer should be user journeys, not screen permutations
-- UI tests should map to user goals, not checkpoints like "screen opened successfully"
-- `DemoUITests.swift` should be the active planning source for UI automation journeys
-- Targeted per-journey UI test runs are more actionable than one large run while the suite is still being stabilized
-- Remove placeholder journeys that only repeat existing CRUD coverage without adding a distinct regression target
-- Empty/failure UI journeys are in scope when backed by explicit UI-test runtime hooks such as alternate seeds or injected failure behavior
+- Investigate this from the clean base branch, not on top of the minimal fix.
+- The first goal is evidence: prove what `SyncModelPublisher<Task>` does in the real save path before proposing another architectural change.
+- The right target is the real edit-save-dismiss seam, not generic sync or machine tests that already pass.
+- The first concrete evidence is now at the `SwiftSync` layer: the model publisher mutates correctly but does not notify observation dependents.
+- Root cause: `SyncModelPublisher.row = fetchedRow` does not notify observers when `fetchedRow` is the same model instance, even if that instance's fields changed in place.
+- Conclusion: the publisher-layer fix removes the need for the `TaskView` workaround in the real assignee UI flow.
 
 ## Files touched
 
 - .agents/state.md
-- docs/planning/demo-ui-integration-automation.md
-- DemoCore/Sources/DemoCore/App/DemoRuntime.swift
-- Demo/Demo/Features/Projects/ProjectsViewController.swift
 - Demo/DemoUITests/DemoUITests.swift
-- Demo/DemoUITests/DemoUITestsLaunchTests.swift
-- docs/planning/demo-ui-integration-automation.md
-- Demo/Demo/Features/Projects/ProjectView.swift
-- Demo/Demo/Features/TaskDetail/TaskView.swift
-- Demo/Demo/Features/TaskForm/TaskFormSheet.swift
-- Demo/DemoUITests/DemoUITests.swift
+- SwiftSync/Sources/SwiftSync/SyncModelPublisher.swift
+- SwiftSync/Tests/SwiftSyncTests/SyncModelPublisherTests.swift
