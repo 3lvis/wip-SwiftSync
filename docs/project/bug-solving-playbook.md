@@ -121,6 +121,14 @@ Investigation creates residue:
 
 Do that work on an investigation branch.
 
+If a new bug is found while working on a base branch or integration branch:
+
+1. stop
+2. move the in-progress bug work onto a new investigation branch immediately
+3. keep the base branch clean
+
+Do not debug on the branch you are trying to keep mergeable.
+
 Once the likely cause is known:
 
 1. return to the clean base branch
@@ -208,7 +216,7 @@ The merged diff should show:
 5. Run one focused scenario at a time.
 6. Isolate the narrowest plausible layer.
 7. Separate product defects from test-surface defects.
-8. Use an investigation branch for messy work.
+8. Move bug work onto an investigation branch immediately.
 9. Once the likely cause is known, branch cleanly from base.
 10. Rebuild only the proven fix.
 11. Ask whether the fix belongs deeper.

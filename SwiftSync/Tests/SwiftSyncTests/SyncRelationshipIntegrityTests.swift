@@ -1,3 +1,5 @@
+import Dispatch
+import Observation
 import XCTest
 import SwiftData
 @testable import SwiftSync
@@ -220,14 +222,16 @@ final class OneSidedUser {
 final class OneSidedTask {
     @Attribute(.unique) var id: Int
     var title: String
+    var syncChangeToken: Int
 
     // No explicit inverse — OneSidedUser has no back-reference to OneSidedTask.
     // This mirrors Task.reviewers / Task.watchers in the Demo.
     @Relationship var members: [OneSidedUser]
 
-    init(id: Int, title: String, members: [OneSidedUser] = []) {
+    init(id: Int, title: String, syncChangeToken: Int = 0, members: [OneSidedUser] = []) {
         self.id = id
         self.title = title
+        self.syncChangeToken = syncChangeToken
         self.members = members
     }
 }
@@ -297,6 +301,7 @@ extension OneSidedTask: SyncUpdatableModel {
     }
 
     func syncMarkChanged() {
+        syncChangeToken += 1
         OneSidedTask.syncMarkChangedCallCount += 1
     }
 }
@@ -613,6 +618,88 @@ final class SyncMarkChangedCallSiteTests: XCTestCase {
         )
         XCTAssertEqual(task.members.count, 0)
     }
+
+    @MainActor
+    func testSyncMarkChangedTokenMakesDirectModelObservationSeeToManyMembershipChange() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(
+            for: OneSidedTask.self, OneSidedUser.self,
+            configurations: config
+        )
+        let context = ModelContext(container)
+
+        try await SwiftSync.sync(
+            payload: [["id": 1, "name": "Alice"], ["id": 2, "name": "Bob"], ["id": 3, "name": "Cara"]],
+            as: OneSidedUser.self,
+            in: context
+        )
+        try await SwiftSync.sync(
+            payload: [["id": 10, "title": "Task 10", "member_ids": [1, 2]]],
+            as: OneSidedTask.self,
+            in: context
+        )
+
+        let task = try XCTUnwrap(context.fetch(FetchDescriptor<OneSidedTask>()).first)
+        let spy = ObservationSpy<[Int]> {
+            task.members.map(\.id).sorted()
+        }
+
+        XCTAssertEqual(spy.values.first, [1, 2])
+
+        try await SwiftSync.sync(
+            payload: [["id": 10, "title": "Task 10", "member_ids": [2, 3]]],
+            as: OneSidedTask.self,
+            in: context
+        )
+
+        try await waitUntil {
+            spy.values.contains(where: { $0 == [2, 3] })
+        }
+
+        XCTAssertEqual(task.members.map(\.id).sorted(), [2, 3])
+        XCTAssertTrue(
+            spy.values.contains(where: { $0 == [2, 3] }),
+            "spy values: \(spy.values)"
+        )
+    }
+}
+
+@MainActor
+private final class ObservationSpy<Value> {
+    private let read: @MainActor () -> Value
+    private(set) var values: [Value] = []
+
+    init(read: @escaping @MainActor () -> Value) {
+        self.read = read
+        observe()
+    }
+
+    private func observe() {
+        withObservationTracking {
+            values.append(read())
+        } onChange: { [weak self] in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                self.observe()
+            }
+        }
+    }
+}
+
+@MainActor
+private func waitUntil(
+    timeoutNanoseconds: UInt64 = 2_000_000_000,
+    pollNanoseconds: UInt64 = 20_000_000,
+    condition: @escaping @MainActor () -> Bool
+) async throws {
+    let deadline = ContinuousClock.now.advanced(by: .nanoseconds(Int64(timeoutNanoseconds)))
+    while ContinuousClock.now < deadline {
+        if condition() {
+            return
+        }
+        try await _Concurrency.Task.sleep(nanoseconds: pollNanoseconds)
+    }
+    XCTFail("Condition not satisfied before timeout")
 }
 
 // MARK: -

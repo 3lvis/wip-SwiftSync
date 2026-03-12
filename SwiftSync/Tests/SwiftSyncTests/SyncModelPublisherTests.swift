@@ -115,6 +115,49 @@ final class SyncModelPublisherTests: XCTestCase {
     }
 
     @MainActor
+    func testPublisherSpyRecordsToManyMembershipChangeForSameRowIdentity() async throws {
+        let syncContainer = try makeContainer(modelTypes: OneSidedTask.self, OneSidedUser.self)
+
+        try await syncContainer.sync(
+            payload: [
+                ["id": 1, "name": "Alice"],
+                ["id": 2, "name": "Bob"],
+                ["id": 3, "name": "Cara"]
+            ],
+            as: OneSidedUser.self
+        )
+        try await syncContainer.sync(
+            payload: [["id": 10, "title": "Task 10", "member_ids": [1, 2]]],
+            as: OneSidedTask.self
+        )
+
+        let publisher = SyncModelPublisher(OneSidedTask.self, id: 10, in: syncContainer)
+        let initialRow = try XCTUnwrap(publisher.row)
+        let spy = ObservationSpy<[Int]> {
+            publisher.row?.members.map(\.id).sorted() ?? []
+        }
+
+        XCTAssertEqual(spy.values.first, [1, 2])
+
+        try await syncContainer.sync(
+            payload: [["id": 10, "title": "Task 10", "member_ids": [2, 3]]],
+            as: OneSidedTask.self
+        )
+
+        try await waitUntil {
+            publisher.row?.members.map(\.id).sorted() == [2, 3]
+        }
+
+        let finalRow = try XCTUnwrap(publisher.row)
+        XCTAssertTrue(initialRow === finalRow)
+        XCTAssertEqual(finalRow.members.map(\.id).sorted(), [2, 3])
+        XCTAssertTrue(
+            spy.values.contains(where: { $0 == [2, 3] }),
+            "spy values: \(spy.values)"
+        )
+    }
+
+    @MainActor
     private func makeContainer(modelTypes: any PersistentModel.Type...) throws -> SyncContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let modelContainer = try ModelContainer(for: Schema(modelTypes), configurations: config)
