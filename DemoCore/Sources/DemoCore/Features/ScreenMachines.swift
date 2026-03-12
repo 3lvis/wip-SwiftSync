@@ -27,7 +27,7 @@ public enum TaskDetailContentState: Equatable {
     case notFound
 }
 
-public struct TaskDetailViewState: Equatable {
+public struct TaskDetailViewState: Equatable, Sendable {
     public let taskID: String
     public let title: String
     public let stateLabel: String
@@ -55,6 +55,23 @@ public struct TaskDetailViewState: Equatable {
             .map(\.displayName)
         watcherIDs = task.watchers.map(\.id).sorted()
     }
+}
+
+public struct TaskItemViewState: Equatable, Identifiable, Sendable {
+    public let id: String
+    public let title: String
+
+    init(item: Item) {
+        id = item.id
+        title = item.title
+    }
+}
+
+public struct TaskDetailSnapshot: Equatable, Sendable {
+    public let detail: TaskDetailViewState?
+    public let items: [TaskItemViewState]
+
+    static let empty = TaskDetailSnapshot(detail: nil, items: [])
 }
 
 public enum TaskFormOptionsState: Equatable {
@@ -243,8 +260,13 @@ public final class ProjectDetailMachine {
 @Observable
 public final class TaskDetailMachine {
     public private(set) var loadState: ScreenLoadState = .idle
-    public private(set) var detail: TaskDetailViewState?
-    public private(set) var items: [Item] = []
+    public private(set) var snapshot: TaskDetailSnapshot = .empty
+    public var detail: TaskDetailViewState? {
+        snapshot.detail
+    }
+    public var items: [TaskItemViewState] {
+        snapshot.items
+    }
     public var contentState: TaskDetailContentState {
         resolveTaskDetailContentState(loadState: loadState, hasTask: detail != nil)
     }
@@ -253,48 +275,76 @@ public final class TaskDetailMachine {
     }
 
     private let taskID: String
+    private let syncContainer: SyncContainer
     private let syncEngine: DemoSyncEngine
-    private let taskPublisher: SyncModelPublisher<Task>
-    private let itemPublisher: SyncQueryPublisher<Item>
     private let loadMachine: ScreenLoadMachine
+    nonisolated(unsafe) private var saveObserver: NSObjectProtocol?
     public init(taskID: String, syncContainer: SyncContainer, syncEngine: DemoSyncEngine) {
         self.taskID = taskID
+        self.syncContainer = syncContainer
         self.syncEngine = syncEngine
-        self.taskPublisher = SyncModelPublisher(
-            Task.self,
-            id: taskID,
-            in: syncContainer,
-        )
-        self.itemPublisher = SyncQueryPublisher(
-            Item.self,
-            relationship: \Item.task,
-            relationshipID: taskID,
-            in: syncContainer,
-            sortBy: [SortDescriptor(\Item.position, order: .forward), SortDescriptor(\Item.id, order: .forward)]
-        )
         self.loadMachine = ScreenLoadMachine { error in
             presentError(error, fallbackMessage: "Could not load this task yet.")
         }
+        self.snapshot = Self.makeSnapshot(taskID: taskID, in: syncContainer.mainContext)
+        self.saveObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("SwiftSync.SyncContainer.didSaveChanges"),
+            object: syncContainer,
+            queue: nil
+        ) { [weak self] _ in
+            guard let self else { return }
+            _Concurrency.Task { @MainActor [weak self] in
+                self?.reloadSnapshot()
+            }
+        }
 
-        observeContinuously {
-            self.detail = self.taskPublisher.row.map(TaskDetailViewState.init)
-        }
-        observeContinuously {
-            self.items = self.itemPublisher.rows
-        }
         observeContinuously {
             self.loadState = self.loadMachine.state
         }
     }
 
     public var editableTask: Task? {
-        taskPublisher.row
+        try? syncContainer.mainContext.fetch(
+            FetchDescriptor<Task>(predicate: #Predicate<Task> { task in
+                task.id == taskID
+            })
+        ).first
     }
 
     public func send(_ event: ScreenLoadEvent) {
         loadMachine.send(event, run: { [syncEngine, taskID] in
             try await syncEngine.syncTaskDetail(taskID: taskID)
         })
+    }
+
+    deinit {
+        if let saveObserver {
+            NotificationCenter.default.removeObserver(saveObserver)
+        }
+    }
+
+    private func reloadSnapshot() {
+        snapshot = Self.makeSnapshot(taskID: taskID, in: syncContainer.mainContext)
+    }
+
+    private static func makeSnapshot(taskID: String, in context: ModelContext) -> TaskDetailSnapshot {
+        let task = try? context.fetch(
+            FetchDescriptor<Task>(predicate: #Predicate<Task> { task in
+                task.id == taskID
+            })
+        ).first
+        let items = (try? context.fetch(
+            FetchDescriptor<Item>(
+                predicate: #Predicate<Item> { item in
+                    item.task?.id == taskID
+                },
+                sortBy: [SortDescriptor(\Item.position, order: .forward), SortDescriptor(\Item.id, order: .forward)]
+            )
+        )) ?? []
+        return TaskDetailSnapshot(
+            detail: task.map(TaskDetailViewState.init),
+            items: items.map(TaskItemViewState.init)
+        )
     }
 }
 

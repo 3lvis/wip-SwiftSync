@@ -2,41 +2,34 @@
 
 ## Plan
 
-- [x] Move the new `testEditTaskPeopleFlow` bug investigation off the base branch onto a dedicated branch
-- [x] Prove the failing seam with focused tests below the UI layer — save path is correct and `SyncModelPublisher` to-many observation is correct
-- [x] Revert the provisional `DemoCore` workaround so the investigation stays honest
-- [~] Investigate the real failing seam from the UI test with targeted logging
-- [ ] Reproduce `testEditTaskPeopleFlow` with test-readable diagnostics
-- [ ] Identify the first wrong state in the real UI flow
-- [ ] Implement the minimal fix in the proven layer
-- [ ] Re-run focused tests, the relevant demo app build, and the UI journey contract
+- [x] Reconfirm branch state, current task-detail implementation, and the last proven experiments
+- [x] Convert `TaskDetailMachine` into an explicit event/snapshot machine backed directly by store reads and save notifications
+- [x] Update `TaskView` to read the event/snapshot machine state
+- [x] Verify the people-flow regression below the UI layer
+- [x] Build the demo app on this branch
+- [ ] Record what this branch proves compared with the direct-`SwiftSync` and value-state experiments
 
 ## Last known state
 
-Branch: `investigate/task-people-ui-surface`
+Branch: `investigate/task-detail-event-snapshot-machine`
 
-Focused tests:
-- `swift test --package-path DemoCore --filter TaskFormPeopleMutationTests`
-- `swift test --package-path SwiftSync --filter SyncModelPublisherTests`
-- result: passing
+Verification:
+- `swift test --package-path DemoCore --filter TaskFormPeopleMutationTests` passed
+- `xcodebuild build-for-testing -project Demo/Demo.xcodeproj -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed
 
-Known source bug:
-- `DemoUITests.testEditTaskPeopleFlow`
-- failure surface: `XCTAssertFalse(app.staticTexts["Noah Kim"].exists)`
+Known comparison points:
+- direct `SwiftSync -> View` task detail path passed `DemoUITests.testEditTaskPeopleFlow`
+- `TaskDetailMachine` with raw mirrored task state was the stale seam
+- this branch now uses a store-backed event/snapshot `TaskDetailMachine`
 
 ## Decisions (don't revisit)
 
-- This bug must be investigated on a dedicated branch, not on `plan/demo-ui-integration-automation`.
-- The first question is whether the save path is wrong or whether the real UI flow is stale or asserting the wrong surface.
-- The save path is already proven correct by `TaskFormPeopleMutationTests/testEditTaskPeopleFlowReplacesReviewersAndWatchers`.
-- `SyncModelPublisher` already proves the same-identity to-many transition correctly, so the next step is UI-test-driven logging, not a deeper library fix.
-- Do not keep the provisional `TaskDetailMachine.withMutation` workaround; it is reverted.
+- This branch is for an event/snapshot machine experiment, not for a permanent fix.
+- The event/snapshot experiment should rebuild task detail from the store on explicit events instead of forwarding `SyncModelPublisher` state live.
+- Keep the current bug-solving work on dedicated experiment branches; do not dirty the base branch.
+- The event/snapshot cut keeps the current `TaskView` contract (`detail`, `items`, `editableTask`) so the comparison stays about machine behavior, not view API churn.
 
 ## Files touched
 
 - .agents/state.md
-- AGENTS.md
-- Demo/DemoUITests/DemoUITests.swift
-- DemoCore/Tests/DemoCoreTests/TaskFormPeopleMutationTests.swift
-- SwiftSync/Tests/SwiftSyncTests/SyncModelPublisherTests.swift
-- docs/project/bug-solving-playbook.md
+- DemoCore/Sources/DemoCore/Features/ScreenMachines.swift
