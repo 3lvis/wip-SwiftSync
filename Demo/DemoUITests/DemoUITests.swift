@@ -159,6 +159,13 @@ final class DemoUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+
+        goBack(app)
+        XCTAssertTrue(app.staticTexts["Fix duplicate push preference sync after reconnect"].waitForExistence(timeout: 10))
+        app.staticTexts["Fix duplicate push preference sync after reconnect"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
         XCTAssertTrue(app.staticTexts["Sofia Garcia"].exists)
         XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
         XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
