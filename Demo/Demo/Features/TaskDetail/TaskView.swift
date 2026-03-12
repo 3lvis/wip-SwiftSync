@@ -68,13 +68,13 @@ extension TaskView {
                 showingEditSheet = true
             }
             .accessibilityIdentifier("task.edit")
-            .disabled(machine.task == nil)
+            .disabled(machine.editableTask == nil)
         }
     }
 
     @ViewBuilder
     var editTaskSheet: some View {
-        if let taskModel = machine.task {
+        if let taskModel = machine.editableTask {
             TaskFormSheet(
                 mode: .edit(task: taskModel),
                 syncContainer: syncContainer,
@@ -88,11 +88,11 @@ extension TaskView {
     }
 
     var reviewerIDs: [String] {
-        machine.task?.reviewers.map(\.id).sorted() ?? []
+        machine.detail?.reviewerIDs ?? []
     }
 
     var watcherIDs: [String] {
-        machine.task?.watchers.map(\.id).sorted() ?? []
+        machine.detail?.watcherIDs ?? []
     }
 
     @ViewBuilder
@@ -109,14 +109,14 @@ extension TaskView {
 
     var taskSection: some View {
         Section {
-            if let taskModel = machine.task {
+            if let detail = machine.detail {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(taskModel.title)
+                    Text(detail.title)
                         .font(.title2)
                         .fontWeight(.bold)
                         .accessibilityIdentifier("task.title")
                     HStack(spacing: 8) {
-                        Text(taskModel.stateLabel)
+                        Text(detail.stateLabel)
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 10)
@@ -124,7 +124,7 @@ extension TaskView {
                             .background(Color.accentColor.opacity(0.15))
                             .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
-                        Text(taskModel.author?.displayName ?? "Unknown")
+                        Text(detail.authorName)
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 10)
@@ -145,9 +145,9 @@ extension TaskView {
 
     @ViewBuilder
     var descriptionSection: some View {
-        if let taskModel = machine.task {
+        if let detail = machine.detail {
             Section("Description") {
-                Text(taskModel.descriptionText)
+                Text(detail.descriptionText)
                     .font(.body)
                     .accessibilityIdentifier("task.description")
             }
@@ -156,7 +156,7 @@ extension TaskView {
 
     @ViewBuilder
     var itemsSection: some View {
-        if machine.task != nil {
+        if machine.detail != nil {
             Section("Items") {
                 if machine.items.isEmpty {
                     Text("No items")
@@ -173,32 +173,29 @@ extension TaskView {
 
     @ViewBuilder
     var peopleSection: some View {
-        if let taskModel = machine.task {
+        if let detail = machine.detail {
             Section("Assignee") {
-                Text(taskModel.assignee?.displayName ?? "Unassigned")
-                    .foregroundStyle(taskModel.assignee == nil ? .secondary : .primary)
+                Text(detail.assigneeName)
+                    .foregroundStyle(detail.hasAssignee ? .primary : .secondary)
                     .accessibilityIdentifier("task.assignee")
             }
 
             Section("Reviewers") {
-                if taskModel.reviewers.isEmpty {
+                if detail.reviewerNames.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(taskModel.reviewers.sorted { $0.displayName < $1.displayName }, id: \.id) { reviewer in
-                        Text(reviewer.displayName)
+                    ForEach(detail.reviewerNames, id: \.self) { reviewerName in
+                        Text(reviewerName)
                     }
                 }
             }
 
             Section("Watchers") {
-                if taskModel.watchers.isEmpty {
+                if detail.watcherNames.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(
-                        taskModel.watchers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending },
-                        id: \.id
-                    ) { watcher in
-                        Text(watcher.displayName)
+                    ForEach(detail.watcherNames, id: \.self) { watcherName in
+                        Text(watcherName)
                     }
                 }
             }
