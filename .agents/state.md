@@ -7,11 +7,11 @@
 - [x] Confirm the planning doc keeps only active open items in the required format
 - [x] Rework `TaskDetailMachine` into the standard publisher-owning screen-machine shape and reconnect `TaskView`
 - [x] Run focused DemoCore tests for task detail refresh behavior and a demo app build for the UI layer change
-- [ ] Update `docs/project/reactive-reads.md` to document the shipped task-detail observation pattern
+- [x] Move task-detail display ordering into `TaskDetailMachine`, remove redundant edit alias, and document the shipped pattern in `docs/project/reactive-reads.md`
 
 ## Last known state
 
-focused DemoCore task-detail refresh test passed; Demo app build passed; manual `DemoUITests.testEditTaskPeopleFlow` verification passed
+focused DemoCore task-detail refresh test passed; Demo app build passed; manual `DemoUITests.testEditTaskPeopleFlow` verification passed; follow-up code/documentation edits unverified
 
 ## Decisions (don't revisit)
 
@@ -23,6 +23,7 @@ focused DemoCore task-detail refresh test passed; Demo app build passed; manual 
 
 - .agents/state.md
 - docs/planning/task-detail-machine-follow-up.md
+- docs/project/reactive-reads.md
 - DemoCore/Sources/DemoCore/Features/ScreenMachines.swift
 - DemoCore/Tests/DemoCoreTests/TaskFormPeopleMutationTests.swift
 - Demo/Demo/Features/TaskDetail/TaskView.swift

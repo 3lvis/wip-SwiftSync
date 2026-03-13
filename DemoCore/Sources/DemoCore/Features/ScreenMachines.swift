@@ -219,6 +219,16 @@ public final class TaskDetailMachine {
     public var items: [Item] {
         itemPublisher.rows
     }
+    public var reviewerNames: [String] {
+        guard let task else { return [] }
+        return task.reviewers.map(\.displayName).sorted()
+    }
+    public var watcherNames: [String] {
+        guard let task else { return [] }
+        return task.watchers
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+            .map(\.displayName)
+    }
     public var contentState: TaskDetailContentState {
         resolveTaskDetailContentState(loadState: loadState, hasTask: task != nil)
     }
@@ -253,10 +263,6 @@ public final class TaskDetailMachine {
         observeContinuously {
             self.loadState = self.loadMachine.state
         }
-    }
-
-    public var editableTask: Task? {
-        task
     }
 
     public func send(_ event: ScreenLoadEvent) {

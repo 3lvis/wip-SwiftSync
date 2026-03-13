@@ -72,5 +72,3 @@ The next `TaskDetailMachine` should:
 - preserve the task-detail UI regression as the end-to-end proof
 
 ## Open items
-
-- [ ] Update `docs/project/reactive-reads.md` to document the shipped task-detail observation pattern

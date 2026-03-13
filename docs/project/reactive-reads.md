@@ -222,6 +222,39 @@ final class TaskDetailMachine {
 }
 ```
 
+Screen-machine rule for synced detail screens:
+
+- let the screen machine own the reactive publishers and load/submission orchestration
+- expose live reads from those publishers through thin computed properties on the machine
+- keep lightweight display-specific derivations there when they are part of the screen contract, such as sorted reviewer or watcher names
+- do not retain a separate same-identity snapshot of the synced model inside the machine just to reshape it for the view
+
+Why:
+
+- the machine boundary stays consistent with the rest of the app
+- the view can remain mostly declarative without taking on sync orchestration
+- the machine avoids introducing another cache layer that can go stale across same-identity updates
+
+Applied to a task-detail style screen, prefer this shape:
+
+```swift
+@MainActor
+@Observable
+final class TaskDetailMachine {
+    private let taskPublisher: SyncModelPublisher<Task>
+    private let itemPublisher: SyncQueryPublisher<Item>
+    private let loadMachine: ScreenLoadMachine
+
+    var task: Task? { taskPublisher.row }
+    var items: [Item] { itemPublisher.rows }
+    var reviewerNames: [String] { task?.reviewers.map(\.displayName).sorted() ?? [] }
+}
+```
+
+Avoid this shape:
+
+- storing a separate `TaskDetailViewState` or similar retained snapshot that mirrors `taskPublisher.row`
+- copying publisher output into another long-lived same-identity value unless that extra state represents a real UI contract that cannot be derived safely on read
 `SyncQueryPublisher` supports the same query shapes as `@SyncQuery`:
 - plain fetch with optional predicate
 - `relationship:` + `relationshipID:` for relationship-scoped queries

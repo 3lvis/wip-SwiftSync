@@ -71,13 +71,13 @@ extension TaskView {
                 showingEditSheet = true
             }
             .accessibilityIdentifier("task.edit")
-            .disabled(machine.editableTask == nil)
+            .disabled(task == nil)
         }
     }
 
     @ViewBuilder
     var editTaskSheet: some View {
-        if let taskModel = machine.editableTask {
+        if let taskModel = task {
             TaskFormSheet(
                 mode: .edit(task: taskModel),
                 syncContainer: syncContainer,
@@ -184,26 +184,21 @@ extension TaskView {
             }
 
             Section("Reviewers") {
-                if taskModel.reviewers.isEmpty {
+                if machine.reviewerNames.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(taskModel.reviewers.sorted { $0.displayName < $1.displayName }, id: \.id) { reviewer in
-                        Text(reviewer.displayName)
+                    ForEach(machine.reviewerNames, id: \.self) { reviewerName in
+                        Text(reviewerName)
                     }
                 }
             }
 
             Section("Watchers") {
-                if taskModel.watchers.isEmpty {
+                if machine.watcherNames.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(
-                        taskModel.watchers.sorted {
-                            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-                        },
-                        id: \.id
-                    ) { watcher in
-                        Text(watcher.displayName)
+                    ForEach(machine.watcherNames, id: \.self) { watcherName in
+                        Text(watcherName)
                     }
                 }
             }
