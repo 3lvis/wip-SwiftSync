@@ -23,6 +23,7 @@ struct TaskFormSheet: View {
     @State private var machine: TaskFormMachine
     @State private var newItemTitle = ""
     @State private var itemEditMode: EditMode = .inactive
+    @State private var activePeoplePicker: PeoplePickerRoute?
 
     init(mode: TaskFormMode, syncContainer: SyncContainer, syncEngine: DemoSyncEngine) {
         self.mode = mode
@@ -61,6 +62,9 @@ struct TaskFormSheet: View {
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+            .navigationDestination(item: $activePeoplePicker) { route in
+                peoplePickerDestination(for: route)
+            }
         }
         .task(loadMetadata)
         .task(id: defaultsTaskID, applyDefaults)
@@ -77,14 +81,10 @@ extension TaskFormSheet {
     @ViewBuilder
     var content: some View {
         loadErrorSection
-        titleSection
+        overviewSection
         descriptionSection
+        peopleSection
         itemsSection
-        stateSection
-        assigneeSection
-        if case .create = mode { authorSection }
-        reviewersSection
-        watchersSection
     }
 
     private var defaultsTaskID: String {
@@ -188,6 +188,92 @@ extension TaskFormSheet {
             }
         )
     }
+
+    @ViewBuilder
+    fileprivate func peoplePickerDestination(for route: PeoplePickerRoute) -> some View {
+        TaskFormPeoplePicker(
+            route: route,
+            users: machine.users,
+            initialSelection: selection(for: route),
+            onDone: { selectedIDs in
+                applySelection(selectedIDs, for: route)
+                activePeoplePicker = nil
+            }
+        )
+    }
+
+    fileprivate func selection(for route: PeoplePickerRoute) -> PeoplePickerSelection {
+        switch route {
+        case .assignee:
+            return .single(draft.assigneeID)
+        case .author:
+            return .single(draft.authorID.isEmpty ? nil : draft.authorID)
+        case .reviewers:
+            return .multiple(Set(draft.reviewers.map(\.id)))
+        case .watchers:
+            return .multiple(Set(draft.watchers.map(\.id)))
+        }
+    }
+
+    fileprivate func applySelection(_ selection: PeoplePickerSelection, for route: PeoplePickerRoute) {
+        switch route {
+        case .assignee:
+            if case .single(let selectedID) = selection {
+                draft.assigneeID = selectedID
+            }
+        case .author:
+            if case .single(let selectedID) = selection {
+                draft.authorID = selectedID ?? ""
+            }
+        case .reviewers:
+            if case .multiple(let selectedIDs) = selection {
+                draft.reviewers = users(matching: selectedIDs)
+            }
+        case .watchers:
+            if case .multiple(let selectedIDs) = selection {
+                draft.watchers = users(matching: selectedIDs)
+            }
+        }
+    }
+
+    func users(matching selectedIDs: Set<String>) -> [User] {
+        machine.users.filter { selectedIDs.contains($0.id) }
+    }
+
+    func displayName(for userID: String?) -> String? {
+        guard let userID else { return nil }
+        return machine.users.first(where: { $0.id == userID })?.displayName
+    }
+
+    fileprivate func summaryText(for route: PeoplePickerRoute) -> String {
+        switch route {
+        case .assignee:
+            return displayName(for: draft.assigneeID) ?? "Unassigned"
+        case .author:
+            return displayName(for: draft.authorID.isEmpty ? nil : draft.authorID) ?? "Choose author"
+        case .reviewers:
+            return peopleSummary(for: draft.reviewers)
+        case .watchers:
+            return peopleSummary(for: draft.watchers)
+        }
+    }
+
+    func peopleSummary(for users: [User]) -> String {
+        let names = users
+            .map(\.displayName)
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+
+        switch names.count {
+        case 0:
+            return "None"
+        case 1:
+            return names[0]
+        case 2:
+            return names.joined(separator: ", ")
+        default:
+            return "\(names.count) selected"
+        }
+    }
 }
 
 private extension View {
@@ -204,11 +290,27 @@ private extension View {
 }
 
 extension TaskFormSheet {
-    var titleSection: some View {
-        Section("Title") {
-            TextEditor(text: $draft.title)
-                .frame(minHeight: 60)
-                .accessibilityIdentifier("task-form.title")
+    var overviewSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 18) {
+                TextEditor(text: $draft.title)
+                    .frame(minHeight: 72)
+                    .font(.title3.weight(.semibold))
+                    .accessibilityIdentifier("task-form.title")
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Quick settings")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    stateControl
+                }
+            }
+            .padding(.vertical, 8)
+        } header: {
+            Text("Overview")
         }
     }
 
@@ -274,39 +376,37 @@ extension TaskFormSheet {
         }
     }
 
-    var stateSection: some View {
-        Section("State") {
-            switch machine.taskStateOptionsState {
-            case .loading:
-                LabeledContent("State") {
-                    ProgressView("Loading states...")
-                }
-            case .available:
+    @ViewBuilder
+    var stateControl: some View {
+        switch machine.taskStateOptionsState {
+        case .loading:
+            LabeledContent("State") {
+                ProgressView("Loading states...")
+            }
+        case .available:
+            Picker("State", selection: $draft.state) {
                 ForEach(machine.taskStateOptions, id: \.id) { option in
-                    Button {
-                        draft.state = option.id
-                        draft.stateLabel = option.label
-                    } label: {
-                        HStack {
-                            Text(option.label).foregroundStyle(.primary)
-                            Spacer()
-                            if draft.state == option.id {
-                                Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .accessibilityIdentifier("task-form.state.\(option.id)")
+                    Text(option.label)
+                        .tag(option.id)
+                        .accessibilityIdentifier("task-form.state.\(option.id)")
                 }
-            case .unavailable:
-                LabeledContent("State") {
-                    Text("Unavailable").foregroundStyle(.secondary)
+            }
+            .pickerStyle(.menu)
+            .onChange(of: draft.state) { _, newValue in
+                if let option = machine.taskStateOptions.first(where: { $0.id == newValue }) {
+                    draft.stateLabel = option.label
                 }
+            }
+        case .unavailable:
+            LabeledContent("State") {
+                Text("Unavailable")
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
-    var assigneeSection: some View {
-        Section {
+    var peopleSection: some View {
+        Section("People") {
             switch machine.userOptionsState {
             case .loading:
                 LabeledContent("People") {
@@ -314,139 +414,58 @@ extension TaskFormSheet {
                 }
             case .available:
                 Button {
-                    draft.assigneeID = nil
+                    activePeoplePicker = .assignee
                 } label: {
-                    HStack {
-                        Text("Unassigned").foregroundStyle(.primary)
-                        Spacer()
-                        if draft.assigneeID == nil {
-                            Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                        }
-                    }
+                    taskFormSummaryRow(
+                        title: "Assignee",
+                        value: summaryText(for: .assignee),
+                        systemImage: "person.crop.circle.badge.checkmark"
+                    )
                 }
-                .accessibilityIdentifier("task-form.assignee.unassigned")
-                ForEach(machine.users, id: \.id) { user in
-                    Button {
-                        draft.assigneeID = user.id
-                    } label: {
-                        HStack {
-                            Text(user.displayName).foregroundStyle(.primary)
-                            Spacer()
-                            if draft.assigneeID == user.id {
-                                Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .accessibilityIdentifier("task-form.assignee.\(user.id)")
-                }
-            case .unavailable:
-                Text("Unavailable")
-                    .foregroundStyle(.secondary)
-            }
-        } header: {
-            Text("Assignee")
-                .accessibilityIdentifier("task-form.section.assignee")
-        }
-    }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("task-form.summary.assignee")
 
-    var authorSection: some View {
-        Section("Author") {
-            switch machine.userOptionsState {
-            case .loading:
-                LabeledContent("People") {
-                    ProgressView("Loading people...")
-                }
-            case .available:
-                ForEach(machine.users, id: \.id) { user in
+                if case .create = mode {
                     Button {
-                        draft.authorID = user.id
+                        activePeoplePicker = .author
                     } label: {
-                        HStack {
-                            Text(user.displayName).foregroundStyle(.primary)
-                            Spacer()
-                            if draft.authorID == user.id {
-                                Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
-                            }
-                        }
+                        taskFormSummaryRow(
+                            title: "Author",
+                            value: summaryText(for: .author),
+                            systemImage: "pencil.line"
+                        )
                     }
-                    .accessibilityIdentifier("task-form.author.\(user.id)")
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("task-form.summary.author")
                 }
-            case .unavailable:
-                Text("Unavailable")
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
 
-    var reviewersSection: some View {
-        Section {
-            switch machine.userOptionsState {
-            case .loading:
-                LabeledContent("People") {
-                    ProgressView("Loading people...")
+                Button {
+                    activePeoplePicker = .reviewers
+                } label: {
+                    taskFormSummaryRow(
+                        title: "Reviewers",
+                        value: summaryText(for: .reviewers),
+                        systemImage: "person.2"
+                    )
                 }
-            case .available:
-                ForEach(machine.users, id: \.id) { user in
-                    Button {
-                        if draft.reviewers.contains(where: { $0.id == user.id }) {
-                            draft.reviewers.removeAll(where: { $0.id == user.id })
-                        } else {
-                            draft.reviewers.append(user)
-                        }
-                    } label: {
-                        HStack {
-                            Text(user.displayName).foregroundStyle(.primary)
-                            Spacer()
-                            if draft.reviewers.contains(where: { $0.id == user.id }) {
-                                Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .accessibilityIdentifier("task-form.reviewer.\(user.id)")
-                }
-            case .unavailable:
-                Text("Unavailable")
-                    .foregroundStyle(.secondary)
-            }
-        } header: {
-            Text("Reviewers")
-                .accessibilityIdentifier("task-form.section.reviewers")
-        }
-    }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("task-form.summary.reviewers")
 
-    var watchersSection: some View {
-        Section {
-            switch machine.userOptionsState {
-            case .loading:
-                LabeledContent("People") {
-                    ProgressView("Loading people...")
+                Button {
+                    activePeoplePicker = .watchers
+                } label: {
+                    taskFormSummaryRow(
+                        title: "Watchers",
+                        value: summaryText(for: .watchers),
+                        systemImage: "eye"
+                    )
                 }
-            case .available:
-                ForEach(machine.users, id: \.id) { user in
-                    Button {
-                        if draft.watchers.contains(where: { $0.id == user.id }) {
-                            draft.watchers.removeAll(where: { $0.id == user.id })
-                        } else {
-                            draft.watchers.append(user)
-                        }
-                    } label: {
-                        HStack {
-                            Text(user.displayName).foregroundStyle(.primary)
-                            Spacer()
-                            if draft.watchers.contains(where: { $0.id == user.id }) {
-                                Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .accessibilityIdentifier("task-form.watcher.\(user.id)")
-                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("task-form.summary.watchers")
             case .unavailable:
-                Text("Unavailable")
+                Text("People unavailable")
                     .foregroundStyle(.secondary)
             }
-        } header: {
-            Text("Watchers")
-                .accessibilityIdentifier("task-form.section.watchers")
         }
     }
 
@@ -463,4 +482,243 @@ extension TaskFormSheet {
             }
         }
     }
+}
+
+fileprivate enum PeoplePickerRoute: String, Identifiable {
+    case assignee
+    case author
+    case reviewers
+    case watchers
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .assignee:
+            return "Assignee"
+        case .author:
+            return "Author"
+        case .reviewers:
+            return "Reviewers"
+        case .watchers:
+            return "Watchers"
+        }
+    }
+
+    var searchPrompt: String {
+        switch self {
+        case .assignee:
+            return "Search assignees"
+        case .author:
+            return "Search authors"
+        case .reviewers:
+            return "Search reviewers"
+        case .watchers:
+            return "Search watchers"
+        }
+    }
+
+    var allowsMultipleSelection: Bool {
+        switch self {
+        case .reviewers, .watchers:
+            return true
+        case .assignee, .author:
+            return false
+        }
+    }
+
+    var supportsEmptySelection: Bool {
+        switch self {
+        case .assignee, .reviewers, .watchers:
+            return true
+        case .author:
+            return false
+        }
+    }
+
+    var emptySelectionTitle: String {
+        switch self {
+        case .assignee:
+            return "Unassigned"
+        case .author:
+            return ""
+        case .reviewers:
+            return "No reviewers"
+        case .watchers:
+            return "No watchers"
+        }
+    }
+}
+
+fileprivate enum PeoplePickerSelection: Equatable {
+    case single(String?)
+    case multiple(Set<String>)
+}
+
+fileprivate struct TaskFormPeoplePicker: View {
+    let route: PeoplePickerRoute
+    let users: [User]
+    let initialSelection: PeoplePickerSelection
+    let onDone: (PeoplePickerSelection) -> Void
+
+    @State private var searchText = ""
+    @State private var singleSelection: String?
+    @State private var multiSelection: Set<String>
+
+    init(
+        route: PeoplePickerRoute,
+        users: [User],
+        initialSelection: PeoplePickerSelection,
+        onDone: @escaping (PeoplePickerSelection) -> Void
+    ) {
+        self.route = route
+        self.users = users
+        self.initialSelection = initialSelection
+        self.onDone = onDone
+
+        switch initialSelection {
+        case .single(let selectedID):
+            _singleSelection = State(initialValue: selectedID)
+            _multiSelection = State(initialValue: [])
+        case .multiple(let selectedIDs):
+            _singleSelection = State(initialValue: nil)
+            _multiSelection = State(initialValue: selectedIDs)
+        }
+    }
+
+    var body: some View {
+        List {
+            if route.supportsEmptySelection {
+                clearSection
+            }
+            resultsSection
+        }
+        .navigationTitle(route.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: route.searchPrompt
+        )
+        .toolbar { toolbarContent }
+        .accessibilityIdentifier("task-form.picker.\(route.rawValue)")
+    }
+
+    var filteredUsers: [User] {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return users }
+        return users.filter { $0.displayName.localizedCaseInsensitiveContains(trimmed) }
+    }
+
+    @ToolbarContentBuilder
+    var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button("Done") {
+                onDone(currentSelection)
+            }
+            .accessibilityIdentifier("task-form.picker.\(route.rawValue).done")
+        }
+    }
+
+    var currentSelection: PeoplePickerSelection {
+        if route.allowsMultipleSelection {
+            return .multiple(multiSelection)
+        }
+        return .single(singleSelection)
+    }
+
+    var clearSection: some View {
+        Section {
+            Button {
+                if route.allowsMultipleSelection {
+                    multiSelection.removeAll()
+                } else {
+                    singleSelection = nil
+                }
+            } label: {
+                Text(route.allowsMultipleSelection ? "Deselect all" : route.emptySelectionTitle)
+                    .foregroundStyle(.primary)
+            }
+            .accessibilityIdentifier("task-form.picker.\(route.rawValue).clear")
+        }
+    }
+
+    var resultsSection: some View {
+        Section(filteredUsers.isEmpty ? "No Results" : "People") {
+            if filteredUsers.isEmpty {
+                Text("No matches")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(filteredUsers, id: \.id) { user in
+                    Button {
+                        toggle(user)
+                    } label: {
+                        HStack {
+                            Text(user.displayName)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if isSelected(user) {
+                                Image(systemName: route.allowsMultipleSelection ? "checkmark.circle.fill" : "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("task-form.picker.\(route.rawValue).row.\(user.id)")
+                }
+            }
+        }
+    }
+
+    var isEmptySelectionActive: Bool {
+        if route.allowsMultipleSelection {
+            return multiSelection.isEmpty
+        }
+        return singleSelection == nil
+    }
+
+    func isSelected(_ user: User) -> Bool {
+        if route.allowsMultipleSelection {
+            return multiSelection.contains(user.id)
+        }
+        return singleSelection == user.id
+    }
+
+    func toggle(_ user: User) {
+        if route.allowsMultipleSelection {
+            if multiSelection.contains(user.id) {
+                multiSelection.remove(user.id)
+            } else {
+                multiSelection.insert(user.id)
+            }
+        } else {
+            singleSelection = user.id
+        }
+    }
+}
+
+@ViewBuilder
+fileprivate func taskFormSummaryRow(title: String, value: String, systemImage: String) -> some View {
+    HStack(spacing: 12) {
+        Image(systemName: systemImage)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(Color.accentColor)
+            .frame(width: 24)
+
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.primary)
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+
+        Spacer()
+
+        Image(systemName: "chevron.right")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.tertiary)
+    }
+    .padding(.vertical, 4)
+    .contentShape(Rectangle())
 }

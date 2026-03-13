@@ -67,8 +67,8 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["task.title"].label, "Add session timeout controls to account settings")
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Ava Martinez")
         XCTAssertEqual(app.staticTexts["task.author"].label, "Ava Martinez")
-        XCTAssertTrue(app.staticTexts["Gather requirements"].exists)
-        XCTAssertTrue(app.staticTexts["Draft implementation plan"].exists)
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["Gather requirements"], in: app))
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["Draft implementation plan"], in: app))
     }
 
     @MainActor
@@ -135,16 +135,19 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
+        scrollToVisible(app.textFields["task-form.items.new-title"], in: app)
         replaceText(in: app.textFields["task-form.items.new-title"], with: addedItemTitle, app: app)
         app.buttons["task-form.items.add"].tap()
 
+        scrollToVisible(app.textFields["task-form.items.0.title"], in: app)
         replaceText(in: app.textFields["task-form.items.0.title"], with: renamedItemTitle, app: app)
+        scrollToVisible(app.buttons["task-form.items.1.delete"], in: app)
         app.buttons["task-form.items.1.delete"].tap()
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
-        XCTAssertTrue(app.staticTexts[renamedItemTitle].exists)
-        XCTAssertTrue(app.staticTexts[addedItemTitle].exists)
+        XCTAssertTrue(findAfterScrolling(app.staticTexts[renamedItemTitle], in: app))
+        XCTAssertTrue(findAfterScrolling(app.staticTexts[addedItemTitle], in: app))
         XCTAssertFalse(app.staticTexts[deletedItemTitle].exists)
     }
 
@@ -161,16 +164,19 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        scrollToVisible(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
-        tapVisible(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"])
+        openPeoplePicker(app, route: "assignee")
+        tapAfterScrolling(app.buttons["task-form.picker.assignee.row.\(DemoSeedUserID.miaPatel)"], in: app)
+        app.buttons["task-form.picker.assignee.done"].tap()
 
-        scrollToVisible(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"], in: app)
-        tapVisible(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"])
-        tapVisible(app.buttons["task-form.reviewer.\(DemoSeedUserID.sofiaGarcia)"])
+        openPeoplePicker(app, route: "reviewers")
+        tapAfterScrolling(app.buttons["task-form.picker.reviewers.row.\(DemoSeedUserID.noahKim)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.picker.reviewers.row.\(DemoSeedUserID.sofiaGarcia)"], in: app)
+        app.buttons["task-form.picker.reviewers.done"].tap()
 
-        scrollToVisible(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
-        tapVisible(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"])
-        tapVisible(app.buttons["task-form.watcher.\(DemoSeedUserID.sofiaGarcia)"])
+        openPeoplePicker(app, route: "watchers")
+        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.ethanLee)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.sofiaGarcia)"], in: app)
+        app.buttons["task-form.picker.watchers.done"].tap()
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -201,7 +207,9 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
 
         openEditTaskForm(app)
-        tapAfterScrolling(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
+        openPeoplePicker(app, route: "assignee")
+        tapAfterScrolling(app.buttons["task-form.picker.assignee.row.\(DemoSeedUserID.miaPatel)"], in: app)
+        app.buttons["task-form.picker.assignee.done"].tap()
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -263,9 +271,14 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        tapAfterScrolling(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.liamBrown)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
+        openPeoplePicker(app, route: "reviewers")
+        tapAfterScrolling(app.buttons["task-form.picker.reviewers.row.\(DemoSeedUserID.noahKim)"], in: app)
+        app.buttons["task-form.picker.reviewers.done"].tap()
+
+        openPeoplePicker(app, route: "watchers")
+        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.liamBrown)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.ethanLee)"], in: app)
+        app.buttons["task-form.picker.watchers.done"].tap()
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -382,6 +395,11 @@ private extension DemoUITests {
     func openEditTaskForm(_ app: XCUIApplication) {
         app.buttons["Edit"].tap()
         XCTAssertTrue(app.buttons["task-form.save"].exists)
+    }
+
+    func openPeoplePicker(_ app: XCUIApplication, route: String) {
+        tapAfterScrolling(app.buttons["task-form.summary.\(route)"], in: app)
+        XCTAssertTrue(app.buttons["task-form.picker.\(route).done"].waitForExistence(timeout: 1))
     }
 
     func deleteTaskFromProject(_ app: XCUIApplication, id: String) {

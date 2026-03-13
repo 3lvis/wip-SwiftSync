@@ -54,8 +54,8 @@ extension TaskView {
         case .content:
             taskSection
             descriptionSection
-            itemsSection
             peopleSection
+            itemsSection
         case .notFound:
             Section {
                 Text("Task not found")
