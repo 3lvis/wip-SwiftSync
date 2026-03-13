@@ -75,7 +75,9 @@ func resolveTaskFormOptionsState(loadState: ScreenLoadState, hasOptions: Bool) -
 @Observable
 public final class ProjectsListMachine {
     public private(set) var loadState: ScreenLoadState = .idle
-    public private(set) var rows: [Project] = []
+    public var rows: [Project] {
+        rowsPublisher.rows
+    }
     public var statusState: ProjectsListStatusState {
         resolveProjectsListStatusState(loadState: loadState, hasRows: !rows.isEmpty)
     }
@@ -95,9 +97,6 @@ public final class ProjectsListMachine {
         }
 
         observeContinuously {
-            self.rows = self.rowsPublisher.rows
-        }
-        observeContinuously {
             self.loadState = self.loadMachine.state
         }
     }
@@ -115,8 +114,12 @@ public final class ProjectsListMachine {
 public final class ProjectDetailMachine {
     public private(set) var loadState: ScreenLoadState = .idle
     public private(set) var deleteState: SubmissionState = .idle
-    public private(set) var project: Project?
-    public private(set) var tasks: [Task] = []
+    public var project: Project? {
+        projectPublisher.rows.first(where: { $0.id == projectID })
+    }
+    public var tasks: [Task] {
+        taskPublisher.rows
+    }
     public var contentState: ProjectDetailContentState {
         resolveProjectDetailContentState(
             loadState: loadState,
@@ -164,12 +167,6 @@ public final class ProjectDetailMachine {
             presentError(error, fallbackMessage: "Could not delete this task.")
         }
 
-        observeContinuously {
-            self.project = self.projectPublisher.rows.first(where: { $0.id == self.projectID })
-        }
-        observeContinuously {
-            self.tasks = self.taskPublisher.rows
-        }
         observeContinuously {
             self.loadState = self.loadMachine.state
         }
