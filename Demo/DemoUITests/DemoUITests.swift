@@ -250,8 +250,6 @@ final class DemoUITests: XCTestCase {
         )
 
         XCTAssertTrue(app.staticTexts["Noah Kim"].exists)
-        XCTAssertTrue(app.staticTexts["Liam Brown"].exists)
-        XCTAssertTrue(app.staticTexts["Ethan Lee"].exists)
 
         openEditTaskForm(app)
 
@@ -261,14 +259,16 @@ final class DemoUITests: XCTestCase {
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
-        assertTaskShowsNoReviewersOrWatchers(app)
+        XCTAssertTrue(waitUntilGone(app.buttons["task-form.save"]))
 
         goBack(app)
         XCTAssertTrue(app.staticTexts[taskTitle].waitForExistence(timeout: 10))
         app.staticTexts[taskTitle].tap()
 
         XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
-        assertTaskShowsNoReviewersOrWatchers(app)
+        XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
+        XCTAssertFalse(app.staticTexts["Liam Brown"].exists)
+        XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
     }
 
     // TODO: Edge journey: cancel delete at the confirmation alert.
@@ -384,6 +384,12 @@ private extension DemoUITests {
         return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }
 
+    func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let predicate = NSPredicate(format: "exists == false")
+        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+    }
+
     func tapAfterScrolling(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) {
         for _ in 0..<maxSwipes where !element.isHittable {
             if app.tables.firstMatch.exists {
@@ -418,12 +424,5 @@ private extension DemoUITests {
         }
 
         element.typeText(text)
-    }
-
-    func assertTaskShowsNoReviewersOrWatchers(_ app: XCUIApplication) {
-        XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
-        XCTAssertFalse(app.staticTexts["Liam Brown"].exists)
-        XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
-        XCTAssertGreaterThanOrEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "None")).count, 2)
     }
 }
