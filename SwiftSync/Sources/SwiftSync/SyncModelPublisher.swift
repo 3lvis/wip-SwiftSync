@@ -61,9 +61,14 @@ public final class SyncModelPublisher<Model: PersistentModel & SyncModelable> {
     private func reload() {
         do {
             let rows = try syncContainer.mainContext.fetch(FetchDescriptor<Model>())
-            row = rows.first { $0[keyPath: Model.syncIdentity] == id }
+            let fetchedRow = rows.first { $0[keyPath: Model.syncIdentity] == id }
+            withMutation(keyPath: \.row) {
+                _row = fetchedRow
+            }
         } catch {
-            row = nil
+            withMutation(keyPath: \.row) {
+                _row = nil
+            }
         }
     }
 
