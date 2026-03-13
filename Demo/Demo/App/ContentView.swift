@@ -9,13 +9,15 @@ struct ContentView: View {
     var body: some View {
         ProjectsView(syncContainer: runtime.syncContainer, syncEngine: runtime.syncEngine)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Picker("Scenario", selection: $runtime.scenario) {
-                    ForEach(DemoNetworkScenario.allCases) { scenario in
-                        Text(scenario.title).tag(scenario)
+            if !runtime.isUITesting {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Picker("Scenario", selection: $runtime.scenario) {
+                        ForEach(DemoNetworkScenario.allCases) { scenario in
+                            Text(scenario.title).tag(scenario)
+                        }
                     }
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
             }
         }
     }

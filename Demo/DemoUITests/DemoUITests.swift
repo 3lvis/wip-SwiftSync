@@ -36,6 +36,19 @@ private enum DemoSeedUserID {
     static let ethanLee = "C3E7A1B2-2001-0000-0000-000000000006"
 }
 
+private enum DemoSeedProjectID {
+    static let accountSecurity = "C3E7A1B2-1001-0000-0000-000000000001"
+    static let notificationsReliability = "C3E7A1B2-1001-0000-0000-000000000002"
+}
+
+private enum DemoSeedTaskID {
+    static let sessionTimeout = "C3E7A1B2-3001-0000-0000-000000000001"
+    static let securityPolicyPatch = "C3E7A1B2-3001-0000-0000-000000000002"
+    static let qaItemList = "C3E7A1B2-3001-0000-0000-000000000003"
+    static let duplicatePushFix = "C3E7A1B2-3001-0000-0000-000000000006"
+    static let incidentPlaybook = "C3E7A1B2-3001-0000-0000-000000000009"
+}
+
 final class DemoUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -47,14 +60,10 @@ final class DemoUITests: XCTestCase {
         let app = configuredApp()
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["Account Security Controls"].waitForExistence(timeout: 10))
-        app.staticTexts["Account Security Controls"].tap()
+        openProject(app, id: DemoSeedProjectID.accountSecurity)
+        openTask(app, id: DemoSeedTaskID.sessionTimeout)
 
-        XCTAssertTrue(app.staticTexts["Add session timeout controls to account settings"].waitForExistence(timeout: 10))
-
-        app.staticTexts["Add session timeout controls to account settings"].tap()
-
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["task.title"].exists)
         XCTAssertEqual(app.staticTexts["task.title"].label, "Add session timeout controls to account settings")
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Ava Martinez")
         XCTAssertEqual(app.staticTexts["task.author"].label, "Ava Martinez")
@@ -70,8 +79,8 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Account Security Controls",
-            taskTitle: "Add session timeout controls to account settings"
+            projectID: DemoSeedProjectID.accountSecurity,
+            taskID: DemoSeedTaskID.sessionTimeout
         )
 
         openEditTaskForm(app)
@@ -79,11 +88,11 @@ final class DemoUITests: XCTestCase {
         replaceText(in: app.textViews["task-form.title"], with: updatedTitle, app: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["task-form.save"].exists)
         XCTAssertEqual(app.staticTexts["task.title"].label, updatedTitle)
 
         goBack(app)
-        XCTAssertTrue(app.staticTexts[updatedTitle].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[updatedTitle].exists)
     }
 
     @MainActor
@@ -92,7 +101,7 @@ final class DemoUITests: XCTestCase {
         let createdTitle = uniqueTitle(prefix: "UI Created Task")
 
         app.launch()
-        openProject(app, title: "Account Security Controls")
+        openProject(app, id: DemoSeedProjectID.accountSecurity)
 
         openCreateTaskForm(app)
 
@@ -100,13 +109,13 @@ final class DemoUITests: XCTestCase {
         XCTAssertFalse(saveButton.isEnabled)
 
         replaceText(in: app.textViews["task-form.title"], with: createdTitle, app: app)
-        XCTAssertTrue(waitUntilEnabled(saveButton))
+        XCTAssertTrue(saveButton.isEnabled)
         saveButton.tap()
 
-        XCTAssertTrue(app.staticTexts[createdTitle].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[createdTitle].exists)
         app.staticTexts[createdTitle].tap()
 
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["task.title"].exists)
         XCTAssertEqual(app.staticTexts["task.title"].label, createdTitle)
     }
 
@@ -120,8 +129,8 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Account Security Controls",
-            taskTitle: "Write QA item list for forced re-auth scenarios"
+            projectID: DemoSeedProjectID.accountSecurity,
+            taskID: DemoSeedTaskID.qaItemList
         )
 
         openEditTaskForm(app)
@@ -133,7 +142,8 @@ final class DemoUITests: XCTestCase {
         app.buttons["task-form.items.1.delete"].tap()
         app.buttons["task-form.save"].tap()
 
-        XCTAssertTrue(app.staticTexts[renamedItemTitle].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["task-form.save"].exists)
+        XCTAssertTrue(app.staticTexts[renamedItemTitle].exists)
         XCTAssertTrue(app.staticTexts[addedItemTitle].exists)
         XCTAssertFalse(app.staticTexts[deletedItemTitle].exists)
     }
@@ -145,8 +155,8 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Team Notifications Reliability",
-            taskTitle: "Fix duplicate push preference sync after reconnect"
+            projectID: DemoSeedProjectID.notificationsReliability,
+            taskID: DemoSeedTaskID.duplicatePushFix
         )
 
         openEditTaskForm(app)
@@ -158,18 +168,17 @@ final class DemoUITests: XCTestCase {
         tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.sofiaGarcia)"], in: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["task-form.save"].exists)
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
 
         goBack(app)
-        XCTAssertTrue(app.staticTexts["Fix duplicate push preference sync after reconnect"].waitForExistence(timeout: 10))
-        app.staticTexts["Fix duplicate push preference sync after reconnect"].tap()
+        openTask(app, id: DemoSeedTaskID.duplicatePushFix)
 
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["task.title"].exists)
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
-        XCTAssertTrue(app.staticTexts["Sofia Garcia"].exists)
-        XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
-        XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
+        XCTAssertTrue(app.staticTexts["task.watcher.\(DemoSeedUserID.sofiaGarcia)"].exists)
+        XCTAssertFalse(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"].exists)
+        XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
     }
 
     @MainActor
@@ -179,39 +188,36 @@ final class DemoUITests: XCTestCase {
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Team Notifications Reliability",
-            taskTitle: "Draft incident playbook for notification delivery degradation"
+            projectID: DemoSeedProjectID.notificationsReliability,
+            taskID: DemoSeedTaskID.incidentPlaybook
         )
 
-        XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["task.assignee"].exists)
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
 
         openEditTaskForm(app)
         tapAfterScrolling(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertTrue(app.staticTexts["task.assignee"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["task-form.save"].exists)
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
 
         goBack(app)
-        XCTAssertTrue(app.staticTexts["Draft incident playbook for notification delivery degradation"].waitForExistence(timeout: 10))
-        app.staticTexts["Draft incident playbook for notification delivery degradation"].tap()
+        openTask(app, id: DemoSeedTaskID.incidentPlaybook)
 
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["task.title"].exists)
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
     }
 
     @MainActor
     func testDeleteTaskFromProject() throws {
         let app = configuredApp()
-        let deletedTaskTitle = "Validate security policy PATCH payload on backend"
 
         app.launch()
-        openProject(app, title: "Account Security Controls")
+        openProject(app, id: DemoSeedProjectID.accountSecurity)
 
-        deleteTaskFromProject(app, title: deletedTaskTitle)
-
-        XCTAssertFalse(app.staticTexts[deletedTaskTitle].waitForExistence(timeout: 2))
+        deleteTaskFromProject(app, id: DemoSeedTaskID.securityPolicyPatch)
+        XCTAssertFalse(app.descendants(matching: .any)["project.task.\(DemoSeedTaskID.securityPolicyPatch)"].exists)
         XCTAssertTrue(app.staticTexts["Add session timeout controls to account settings"].exists)
         XCTAssertTrue(app.staticTexts["Write QA item list for forced re-auth scenarios"].exists)
     }
@@ -240,16 +246,15 @@ final class DemoUITests: XCTestCase {
     @MainActor
     func testClearTaskReviewersOrWatchers() throws {
         let app = configuredApp()
-        let taskTitle = "Fix duplicate push preference sync after reconnect"
 
         app.launch()
         openTaskDetail(
             app,
-            projectTitle: "Team Notifications Reliability",
-            taskTitle: taskTitle
+            projectID: DemoSeedProjectID.notificationsReliability,
+            taskID: DemoSeedTaskID.duplicatePushFix
         )
 
-        XCTAssertTrue(app.staticTexts["Noah Kim"].exists)
+        XCTAssertTrue(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"].exists)
 
         openEditTaskForm(app)
 
@@ -258,17 +263,15 @@ final class DemoUITests: XCTestCase {
         tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
-        XCTAssertTrue(waitUntilGone(app.buttons["task-form.save"]))
+        XCTAssertFalse(app.buttons["task-form.save"].exists)
 
         goBack(app)
-        XCTAssertTrue(app.staticTexts[taskTitle].waitForExistence(timeout: 10))
-        app.staticTexts[taskTitle].tap()
+        openTask(app, id: DemoSeedTaskID.duplicatePushFix)
 
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
-        XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
-        XCTAssertFalse(app.staticTexts["Liam Brown"].exists)
-        XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
+        XCTAssertTrue(app.staticTexts["task.title"].exists)
+        XCTAssertFalse(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"].exists)
+        XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.liamBrown)"].exists)
+        XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
     }
 
     // TODO: Edge journey: cancel delete at the confirmation alert.
@@ -344,16 +347,22 @@ private extension DemoUITests {
         "\(prefix) \(UUID().uuidString.prefix(6))"
     }
 
-    func openProject(_ app: XCUIApplication, title: String) {
-        XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 10))
-        app.staticTexts[title].tap()
+    func openProject(_ app: XCUIApplication, id: String) {
+        let row = app.cells["projects.row.\(id)"]
+        XCTAssertTrue(row.exists)
+        row.tap()
     }
 
-    func openTaskDetail(_ app: XCUIApplication, projectTitle: String, taskTitle: String) {
-        openProject(app, title: projectTitle)
-        XCTAssertTrue(app.staticTexts[taskTitle].waitForExistence(timeout: 10))
-        app.staticTexts[taskTitle].tap()
-        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+    func openTask(_ app: XCUIApplication, id: String) {
+        let taskRow = app.descendants(matching: .any)["project.task.\(id)"]
+        XCTAssertTrue(taskRow.waitForExistence(timeout: 1))
+        taskRow.tap()
+    }
+
+    func openTaskDetail(_ app: XCUIApplication, projectID: String, taskID: String) {
+        openProject(app, id: projectID)
+        openTask(app, id: taskID)
+        XCTAssertTrue(app.staticTexts["task.title"].exists)
     }
 
     func goBack(_ app: XCUIApplication) {
@@ -362,32 +371,20 @@ private extension DemoUITests {
 
     func openCreateTaskForm(_ app: XCUIApplication) {
         app.buttons["New Task"].tap()
-        XCTAssertTrue(app.buttons["task-form.save"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["task-form.save"].exists)
     }
 
     func openEditTaskForm(_ app: XCUIApplication) {
         app.buttons["Edit"].tap()
-        XCTAssertTrue(app.buttons["task-form.save"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["task-form.save"].exists)
     }
 
-    func deleteTaskFromProject(_ app: XCUIApplication, title: String) {
-        let taskTitle = app.staticTexts[title]
-        XCTAssertTrue(taskTitle.waitForExistence(timeout: 10))
-        taskTitle.swipeLeft()
+    func deleteTaskFromProject(_ app: XCUIApplication, id: String) {
+        let taskRow = app.descendants(matching: .any)["project.task.\(id)"]
+        XCTAssertTrue(taskRow.exists)
+        taskRow.swipeLeft()
         app.buttons["Delete"].tap()
         app.alerts["Delete Task?"].buttons["Delete"].tap()
-    }
-
-    func waitUntilEnabled(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
-        let predicate = NSPredicate(format: "enabled == true")
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
-    }
-
-    func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
-        let predicate = NSPredicate(format: "exists == false")
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }
 
     func tapAfterScrolling(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) {
@@ -407,15 +404,15 @@ private extension DemoUITests {
     }
 
     func replaceText(in element: XCUIElement, with text: String, app: XCUIApplication) {
-        XCTAssertTrue(element.waitForExistence(timeout: 10))
+        XCTAssertTrue(element.exists)
         element.tap()
 
         if let currentValue = element.value as? String, !currentValue.isEmpty {
             element.press(forDuration: 1.0)
 
-            if app.menuItems["Select All"].waitForExistence(timeout: 2) {
+            if app.menuItems["Select All"].exists {
                 app.menuItems["Select All"].tap()
-            } else if app.buttons["Select All"].waitForExistence(timeout: 2) {
+            } else if app.buttons["Select All"].exists {
                 app.buttons["Select All"].tap()
             } else {
                 let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)

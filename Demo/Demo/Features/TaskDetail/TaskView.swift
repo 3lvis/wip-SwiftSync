@@ -184,21 +184,23 @@ extension TaskView {
             }
 
             Section("Reviewers") {
-                if machine.reviewerNames.isEmpty {
+                if taskModel.reviewers.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(machine.reviewerNames, id: \.self) { reviewerName in
-                        Text(reviewerName)
+                    ForEach(taskModel.reviewers.sorted(by: { $0.displayName < $1.displayName }), id: \.id) { reviewer in
+                        Text(reviewer.displayName)
+                            .accessibilityIdentifier("task.reviewer.\(reviewer.id)")
                     }
                 }
             }
 
             Section("Watchers") {
-                if machine.watcherNames.isEmpty {
+                if taskModel.watchers.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(machine.watcherNames, id: \.self) { watcherName in
-                        Text(watcherName)
+                    ForEach(taskModel.watchers.sorted(by: { $0.displayName < $1.displayName }), id: \.id) { watcher in
+                        Text(watcher.displayName)
+                            .accessibilityIdentifier("task.watcher.\(watcher.id)")
                     }
                 }
             }

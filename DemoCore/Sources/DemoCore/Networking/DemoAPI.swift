@@ -41,17 +41,25 @@ public enum DemoAPIError: LocalizedError {
 
 @MainActor
 public final class FakeDemoAPIClient {
+    public enum NetworkDelayMode {
+        case scenarioDriven
+        case disabled
+    }
+
     public var scenario: DemoNetworkScenario
 
     private let backend: DemoServerSimulator
+    private let networkDelayMode: NetworkDelayMode
     private var requestCounter = 0
 
     public init(
         scenario: DemoNetworkScenario = .fastStable,
         seedData: DemoSeedData? = nil,
-        backend: DemoServerSimulator? = nil
+        backend: DemoServerSimulator? = nil,
+        networkDelayMode: NetworkDelayMode = .scenarioDriven
     ) {
         self.scenario = scenario
+        self.networkDelayMode = networkDelayMode
         if let backend {
             self.backend = backend
             return
@@ -158,6 +166,8 @@ public final class FakeDemoAPIClient {
         case .fastStable, .slowNetwork:
             break
         }
+
+        guard networkDelayMode == .scenarioDriven else { return }
 
         let baseDelayMS: UInt64 = switch scenario {
         case .fastStable: 150

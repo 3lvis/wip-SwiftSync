@@ -12,6 +12,7 @@ public final class DemoRuntime {
         }
     }
 
+    public let isUITesting: Bool
     public let syncContainer: SyncContainer
     public let syncEngine: DemoSyncEngine
 
@@ -19,10 +20,12 @@ public final class DemoRuntime {
 
     public init() {
         let launchConfiguration = LaunchConfiguration.current()
+        self.isUITesting = launchConfiguration.isUITesting
         self.scenario = launchConfiguration.scenario
         self.apiClient = FakeDemoAPIClient(
             scenario: launchConfiguration.scenario,
-            seedData: launchConfiguration.seedData
+            seedData: launchConfiguration.seedData,
+            networkDelayMode: launchConfiguration.networkDelayMode
         )
 
         do {
@@ -66,6 +69,8 @@ private extension DemoRuntime {
         let scenario: DemoNetworkScenario
         let seedData: DemoSeedData?
         let storeURL: URL
+        let isUITesting: Bool
+        let networkDelayMode: FakeDemoAPIClient.NetworkDelayMode
 
         static func current() -> LaunchConfiguration {
             let environment = ProcessInfo.processInfo.environment
@@ -75,7 +80,9 @@ private extension DemoRuntime {
                 return LaunchConfiguration(
                     scenario: scenario,
                     seedData: nil,
-                    storeURL: DemoRuntime.localStoreURL()
+                    storeURL: DemoRuntime.localStoreURL(),
+                    isUITesting: false,
+                    networkDelayMode: .scenarioDriven
                 )
             }
 
@@ -88,7 +95,9 @@ private extension DemoRuntime {
             return LaunchConfiguration(
                 scenario: scenario,
                 seedData: DemoSeedData.generate(),
-                storeURL: storeURL
+                storeURL: storeURL,
+                isUITesting: true,
+                networkDelayMode: .disabled
             )
         }
     }
