@@ -8,7 +8,9 @@ struct TaskView: View {
     let syncContainer: SyncContainer
     let syncEngine: DemoSyncEngine
 
-    @State private var machine: TaskDetailMachine
+    @State private var taskPublisher: SyncModelPublisher<Task>
+    @State private var itemPublisher: SyncQueryPublisher<Item>
+    @State private var loadMachine: ScreenLoadMachine
     @State private var showingEditSheet = false
 
     init(taskID: String, syncContainer: SyncContainer, syncEngine: DemoSyncEngine) {
@@ -16,8 +18,25 @@ struct TaskView: View {
         self.syncContainer = syncContainer
         self.syncEngine = syncEngine
 
-        _machine = State(
-            initialValue: TaskDetailMachine(taskID: taskID, syncContainer: syncContainer, syncEngine: syncEngine)
+        _taskPublisher = State(
+            initialValue: SyncModelPublisher(Task.self, id: taskID, in: syncContainer)
+        )
+        _itemPublisher = State(
+            initialValue: SyncQueryPublisher(
+                Item.self,
+                relationship: \Item.task,
+                relationshipID: taskID,
+                in: syncContainer,
+                sortBy: [
+                    SortDescriptor(\Item.position, order: .forward),
+                    SortDescriptor(\Item.id, order: .forward)
+                ]
+            )
+        )
+        _loadMachine = State(
+            initialValue: ScreenLoadMachine { error in
+                presentError(error, fallbackMessage: "Could not load this task yet.")
+            }
         )
     }
 
@@ -26,7 +45,7 @@ struct TaskView: View {
         .accessibilityIdentifier("task.detail")
         .navigationTitle("Task")
         .toolbar { toolbarContent }
-        .task { machine.send(.onAppear) }
+        .task(loadTask)
         .animation(.snappy(duration: 0.2), value: itemIDs)
         .animation(.snappy(duration: 0.2), value: reviewerIDs)
         .animation(.snappy(duration: 0.2), value: watcherIDs)
@@ -35,13 +54,32 @@ struct TaskView: View {
 }
 
 extension TaskView {
+    var task: Task? {
+        taskPublisher.row
+    }
+
+    var loadState: ScreenLoadState {
+        loadMachine.state
+    }
+
+    var loadErrorPresentation: ErrorPresentationState? {
+        loadState.errorPresentation
+    }
+
+    var contentState: TaskDetailContentState {
+        if task != nil {
+            return .content
+        }
+        return loadState.isLoading ? .loading : .notFound
+    }
+
     @ViewBuilder
     var content: some View {
-        if let presentation = machine.loadErrorPresentation {
+        if let presentation = loadErrorPresentation {
             errorSection(presentation)
         }
 
-        switch machine.contentState {
+        switch contentState {
         case .loading:
             Section {
                 LabeledContent("Status") {
@@ -68,13 +106,13 @@ extension TaskView {
                 showingEditSheet = true
             }
             .accessibilityIdentifier("task.edit")
-            .disabled(machine.editableTask == nil)
+            .disabled(task == nil)
         }
     }
 
     @ViewBuilder
     var editTaskSheet: some View {
-        if let taskModel = machine.editableTask {
+        if let taskModel = task {
             TaskFormSheet(
                 mode: .edit(task: taskModel),
                 syncContainer: syncContainer,
@@ -84,15 +122,15 @@ extension TaskView {
     }
 
     var itemIDs: [String] {
-        machine.items.map(\.id)
+        itemPublisher.rows.map(\.id)
     }
 
     var reviewerIDs: [String] {
-        machine.detail?.reviewerIDs ?? []
+        task?.reviewers.map(\.id).sorted() ?? []
     }
 
     var watcherIDs: [String] {
-        machine.detail?.watcherIDs ?? []
+        task?.watchers.map(\.id).sorted() ?? []
     }
 
     @ViewBuilder
@@ -109,14 +147,14 @@ extension TaskView {
 
     var taskSection: some View {
         Section {
-            if let detail = machine.detail {
+            if let taskModel = task {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(detail.title)
+                    Text(taskModel.title)
                         .font(.title2)
                         .fontWeight(.bold)
                         .accessibilityIdentifier("task.title")
                     HStack(spacing: 8) {
-                        Text(detail.stateLabel)
+                        Text(taskModel.stateLabel)
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 10)
@@ -124,7 +162,7 @@ extension TaskView {
                             .background(Color.accentColor.opacity(0.15))
                             .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
-                        Text(detail.authorName)
+                        Text(taskModel.author?.displayName ?? "Unknown")
                             .font(.caption)
                             .fontWeight(.medium)
                             .padding(.horizontal, 10)
@@ -145,9 +183,9 @@ extension TaskView {
 
     @ViewBuilder
     var descriptionSection: some View {
-        if let detail = machine.detail {
+        if let taskModel = task {
             Section("Description") {
-                Text(detail.descriptionText)
+                Text(taskModel.descriptionText)
                     .font(.body)
                     .accessibilityIdentifier("task.description")
             }
@@ -156,13 +194,13 @@ extension TaskView {
 
     @ViewBuilder
     var itemsSection: some View {
-        if machine.detail != nil {
+        if task != nil {
             Section("Items") {
-                if machine.items.isEmpty {
+                if itemPublisher.rows.isEmpty {
                     Text("No items")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(machine.items, id: \.id) { item in
+                    ForEach(itemPublisher.rows, id: \.id) { item in
                         Text(item.title)
                             .foregroundStyle(.primary)
                     }
@@ -173,32 +211,44 @@ extension TaskView {
 
     @ViewBuilder
     var peopleSection: some View {
-        if let detail = machine.detail {
+        if let taskModel = task {
             Section("Assignee") {
-                Text(detail.assigneeName)
-                    .foregroundStyle(detail.hasAssignee ? .primary : .secondary)
+                Text(taskModel.assignee?.displayName ?? "Unassigned")
+                    .foregroundStyle(taskModel.assignee == nil ? .secondary : .primary)
                     .accessibilityIdentifier("task.assignee")
             }
 
             Section("Reviewers") {
-                if detail.reviewerNames.isEmpty {
+                if taskModel.reviewers.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(detail.reviewerNames, id: \.self) { reviewerName in
-                        Text(reviewerName)
+                    ForEach(taskModel.reviewers.sorted { $0.displayName < $1.displayName }, id: \.id) { reviewer in
+                        Text(reviewer.displayName)
                     }
                 }
             }
 
             Section("Watchers") {
-                if detail.watcherNames.isEmpty {
+                if taskModel.watchers.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(detail.watcherNames, id: \.self) { watcherName in
-                        Text(watcherName)
+                    ForEach(
+                        taskModel.watchers.sorted {
+                            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                        },
+                        id: \.id
+                    ) { watcher in
+                        Text(watcher.displayName)
                     }
                 }
             }
+        }
+    }
+
+    @Sendable
+    func loadTask() async {
+        loadMachine.send(.onAppear) { [syncEngine, taskID] in
+            try await syncEngine.syncTaskDetail(taskID: taskID)
         }
     }
 }

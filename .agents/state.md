@@ -2,41 +2,27 @@
 
 ## Plan
 
-- [x] Move the new `testEditTaskPeopleFlow` bug investigation off the base branch onto a dedicated branch
-- [x] Prove the failing seam with focused tests below the UI layer — save path is correct and `SyncModelPublisher` to-many observation is correct
-- [x] Revert the provisional `DemoCore` workaround so the investigation stays honest
-- [~] Investigate the real failing seam from the UI test with targeted logging
-- [ ] Reproduce `testEditTaskPeopleFlow` with test-readable diagnostics
-- [ ] Identify the first wrong state in the real UI flow
-- [ ] Implement the minimal fix in the proven layer
-- [ ] Re-run focused tests, the relevant demo app build, and the UI journey contract
+- [x] Restore the direct `SwiftSync -> View` task-detail experiment onto this fresh branch
+- [x] Build the demo app on this branch
+- [x] Summarize exactly what this branch contains and how it differs from the machine-based variants
 
 ## Last known state
 
-Branch: `investigate/task-people-ui-surface`
+Branch: `investigate/task-detail-direct-view`
 
-Focused tests:
-- `swift test --package-path DemoCore --filter TaskFormPeopleMutationTests`
-- `swift test --package-path SwiftSync --filter SyncModelPublisherTests`
-- result: passing
-
-Known source bug:
-- `DemoUITests.testEditTaskPeopleFlow`
-- failure surface: `XCTAssertFalse(app.staticTexts["Noah Kim"].exists)`
+Current branch state:
+- branched from `investigate/task-people-ui-surface`
+- `TaskView` now owns `SyncModelPublisher<Task>`, `SyncQueryPublisher<Item>`, and `ScreenLoadMachine` directly
+- the task-detail screen no longer depends on `TaskDetailMachine` or `TaskDetailViewState`
+- `xcodebuild build-for-testing -project Demo/Demo.xcodeproj -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed
+- `xcodebuild test -project Demo/Demo.xcodeproj -scheme Demo -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.2' -only-testing:DemoUITests/testEditTaskPeopleFlow CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed
 
 ## Decisions (don't revisit)
 
-- This bug must be investigated on a dedicated branch, not on `plan/demo-ui-integration-automation`.
-- The first question is whether the save path is wrong or whether the real UI flow is stale or asserting the wrong surface.
-- The save path is already proven correct by `TaskFormPeopleMutationTests/testEditTaskPeopleFlowReplacesReviewersAndWatchers`.
-- `SyncModelPublisher` already proves the same-identity to-many transition correctly, so the next step is UI-test-driven logging, not a deeper library fix.
-- Do not keep the provisional `TaskDetailMachine.withMutation` workaround; it is reverted.
+- This branch is only for restoring the direct-view experiment for review.
+- Keep the experiment narrow to `TaskView`; do not redesign the rest of the app here.
 
 ## Files touched
 
 - .agents/state.md
-- AGENTS.md
-- Demo/DemoUITests/DemoUITests.swift
-- DemoCore/Tests/DemoCoreTests/TaskFormPeopleMutationTests.swift
-- SwiftSync/Tests/SwiftSyncTests/SyncModelPublisherTests.swift
-- docs/project/bug-solving-playbook.md
+- Demo/Demo/Features/TaskDetail/TaskView.swift
