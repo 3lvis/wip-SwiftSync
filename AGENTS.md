@@ -57,6 +57,9 @@
 
 - Never do implementation work on `main` or `master`.
 - If the current branch is `main` or `master`, stop and move all uncommitted changes onto a new branch before continuing any work.
+- Use conventional branch naming with a lowercase slash prefix plus a short kebab-case slug.
+- Preferred prefixes: `feature/`, `fix/`, `chore/`, `docs/`, `refactor/`, `spike/`.
+- Branch names should describe the work, not the author or tool. Example: `fix/task-detail-refresh` or `refactor/project-machine-thinning`.
 - Default all commands to sequential execution.
 - Run commands in parallel only when they are independent and read-only.
 - Never run mutating commands in parallel (git/worktree/index writes, file writes, build artifacts, caches, or derived data).
