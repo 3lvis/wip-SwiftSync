@@ -88,7 +88,7 @@ final class DemoUITests: XCTestCase {
         replaceText(in: app.textViews["task-form.title"], with: updatedTitle, app: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertFalse(app.buttons["task-form.save"].exists)
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
         XCTAssertEqual(app.staticTexts["task.title"].label, updatedTitle)
 
         goBack(app)
@@ -142,7 +142,7 @@ final class DemoUITests: XCTestCase {
         app.buttons["task-form.items.1.delete"].tap()
         app.buttons["task-form.save"].tap()
 
-        XCTAssertFalse(app.buttons["task-form.save"].exists)
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
         XCTAssertTrue(app.staticTexts[renamedItemTitle].exists)
         XCTAssertTrue(app.staticTexts[addedItemTitle].exists)
         XCTAssertFalse(app.staticTexts[deletedItemTitle].exists)
@@ -161,14 +161,19 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        tapAfterScrolling(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.reviewer.\(DemoSeedUserID.sofiaGarcia)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.sofiaGarcia)"], in: app)
+        scrollToVisible(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
+        tapVisible(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"])
+
+        scrollToVisible(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"], in: app)
+        tapVisible(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"])
+        tapVisible(app.buttons["task-form.reviewer.\(DemoSeedUserID.sofiaGarcia)"])
+
+        scrollToVisible(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
+        tapVisible(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"])
+        tapVisible(app.buttons["task-form.watcher.\(DemoSeedUserID.sofiaGarcia)"])
         app.buttons["task-form.save"].tap()
 
-        XCTAssertFalse(app.buttons["task-form.save"].exists)
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
 
         goBack(app)
@@ -176,7 +181,7 @@ final class DemoUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["task.title"].exists)
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
-        XCTAssertTrue(app.staticTexts["task.watcher.\(DemoSeedUserID.sofiaGarcia)"].exists)
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["task.watcher.\(DemoSeedUserID.sofiaGarcia)"], in: app))
         XCTAssertFalse(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"].exists)
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
     }
@@ -199,7 +204,7 @@ final class DemoUITests: XCTestCase {
         tapAfterScrolling(app.buttons["task-form.assignee.\(DemoSeedUserID.miaPatel)"], in: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertFalse(app.buttons["task-form.save"].exists)
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
 
         goBack(app)
@@ -263,7 +268,7 @@ final class DemoUITests: XCTestCase {
         tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
         app.buttons["task-form.save"].tap()
 
-        XCTAssertFalse(app.buttons["task-form.save"].exists)
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
 
         goBack(app)
         openTask(app, id: DemoSeedTaskID.duplicatePushFix)
@@ -381,7 +386,7 @@ private extension DemoUITests {
 
     func deleteTaskFromProject(_ app: XCUIApplication, id: String) {
         let taskRow = app.descendants(matching: .any)["project.task.\(id)"]
-        XCTAssertTrue(taskRow.exists)
+        XCTAssertTrue(taskRow.waitForExistence(timeout: 1))
         taskRow.swipeLeft()
         app.buttons["Delete"].tap()
         app.alerts["Delete Task?"].buttons["Delete"].tap()
@@ -403,6 +408,39 @@ private extension DemoUITests {
         element.tap()
     }
 
+    func scrollToVisible(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) {
+        for _ in 0..<maxSwipes where !element.exists {
+            if app.tables.firstMatch.exists {
+                app.tables.firstMatch.swipeUp()
+            } else if app.scrollViews.firstMatch.exists {
+                app.scrollViews.firstMatch.swipeUp()
+            } else if app.otherElements["task-form"].exists {
+                app.otherElements["task-form"].swipeUp()
+            } else {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(element.exists)
+    }
+
+    func tapVisible(_ element: XCUIElement) {
+        XCTAssertTrue(element.exists)
+        element.tap()
+    }
+
+    func findAfterScrolling(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 6) -> Bool {
+        for _ in 0..<maxSwipes where !element.exists {
+            if app.tables.firstMatch.exists {
+                app.tables.firstMatch.swipeUp()
+            } else if app.scrollViews.firstMatch.exists {
+                app.scrollViews.firstMatch.swipeUp()
+            } else {
+                app.swipeUp()
+            }
+        }
+        return element.exists
+    }
+
     func replaceText(in element: XCUIElement, with text: String, app: XCUIApplication) {
         XCTAssertTrue(element.exists)
         element.tap()
@@ -410,9 +448,9 @@ private extension DemoUITests {
         if let currentValue = element.value as? String, !currentValue.isEmpty {
             element.press(forDuration: 1.0)
 
-            if app.menuItems["Select All"].exists {
+            if app.menuItems["Select All"].waitForExistence(timeout: 0.5) {
                 app.menuItems["Select All"].tap()
-            } else if app.buttons["Select All"].exists {
+            } else if app.buttons["Select All"].waitForExistence(timeout: 0.5) {
                 app.buttons["Select All"].tap()
             } else {
                 let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)

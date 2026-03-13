@@ -4,12 +4,12 @@
 
 - [x] Audit explicit waits and helper usage in `Demo/DemoUITests/DemoUITests.swift`
 - [x] Remove redundant waits and tighten timeout defaults where the UI contract is stronger
-- [~] Re-run the relevant UI tests and compare behavior
-- [ ] Update the state capsule with verification results and any remaining wait risks
+- [x] Re-run the relevant UI tests and compare behavior
+- [x] Update the state capsule with verification results and any remaining wait risks
 
 ## Last known state
 
-`testProjectAndTaskDetailShowSeededContent` passes with a single targeted `waitForExistence(timeout: 1)` in `openTask`; remaining tests still need rerun
+user reported the full UI suite passing after reintroducing only the proven waits and the people-flow scrolling fixes
 
 ## Decisions (don't revisit)
 

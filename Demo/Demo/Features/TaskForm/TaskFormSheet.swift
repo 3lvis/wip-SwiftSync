@@ -306,7 +306,7 @@ extension TaskFormSheet {
     }
 
     var assigneeSection: some View {
-        Section("Assignee") {
+        Section {
             switch machine.userOptionsState {
             case .loading:
                 LabeledContent("People") {
@@ -343,6 +343,9 @@ extension TaskFormSheet {
                 Text("Unavailable")
                     .foregroundStyle(.secondary)
             }
+        } header: {
+            Text("Assignee")
+                .accessibilityIdentifier("task-form.section.assignee")
         }
     }
 
@@ -376,7 +379,7 @@ extension TaskFormSheet {
     }
 
     var reviewersSection: some View {
-        Section("Reviewers") {
+        Section {
             switch machine.userOptionsState {
             case .loading:
                 LabeledContent("People") {
@@ -405,11 +408,14 @@ extension TaskFormSheet {
                 Text("Unavailable")
                     .foregroundStyle(.secondary)
             }
+        } header: {
+            Text("Reviewers")
+                .accessibilityIdentifier("task-form.section.reviewers")
         }
     }
 
     var watchersSection: some View {
-        Section("Watchers") {
+        Section {
             switch machine.userOptionsState {
             case .loading:
                 LabeledContent("People") {
@@ -438,6 +444,9 @@ extension TaskFormSheet {
                 Text("Unavailable")
                     .foregroundStyle(.secondary)
             }
+        } header: {
+            Text("Watchers")
+                .accessibilityIdentifier("task-form.section.watchers")
         }
     }
 
