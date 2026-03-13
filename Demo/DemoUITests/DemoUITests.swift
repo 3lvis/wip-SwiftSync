@@ -31,6 +31,7 @@ private enum DemoUITestPlan {
 private enum DemoSeedUserID {
     static let noahKim = "C3E7A1B2-2001-0000-0000-000000000002"
     static let miaPatel = "C3E7A1B2-2001-0000-0000-000000000003"
+    static let liamBrown = "C3E7A1B2-2001-0000-0000-000000000004"
     static let sofiaGarcia = "C3E7A1B2-2001-0000-0000-000000000005"
     static let ethanLee = "C3E7A1B2-2001-0000-0000-000000000006"
 }
@@ -200,13 +201,20 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
     }
 
-    // TODO: User journey: remove work safely.
-    // Purpose:
-    // - prove destructive mutation through the sync layer
-    // - prove the scoped project list refreshes after delete
-    //
-    // @MainActor
-    // func testDeleteTaskFromProject() throws {}
+    @MainActor
+    func testDeleteTaskFromProject() throws {
+        let app = configuredApp()
+        let deletedTaskTitle = "Validate security policy PATCH payload on backend"
+
+        app.launch()
+        openProject(app, title: "Account Security Controls")
+
+        deleteTaskFromProject(app, title: deletedTaskTitle)
+
+        XCTAssertFalse(app.staticTexts[deletedTaskTitle].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Add session timeout controls to account settings"].exists)
+        XCTAssertTrue(app.staticTexts["Write QA item list for forced re-auth scenarios"].exists)
+    }
 
     // TODO: Edge journey: cancel create.
     // Purpose:
@@ -229,12 +237,39 @@ final class DemoUITests: XCTestCase {
     // @MainActor
     // func testEditTaskNormalizesEmptyDescription() throws {}
 
-    // TODO: Edge journey: remove all reviewers or watchers.
-    // Purpose:
-    // - prove relationship clearing persists and task detail falls back to "None"
-    //
-    // @MainActor
-    // func testClearTaskReviewersOrWatchers() throws {}
+    @MainActor
+    func testClearTaskReviewersOrWatchers() throws {
+        let app = configuredApp()
+        let taskTitle = "Fix duplicate push preference sync after reconnect"
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectTitle: "Team Notifications Reliability",
+            taskTitle: taskTitle
+        )
+
+        XCTAssertTrue(app.staticTexts["Noah Kim"].exists)
+        XCTAssertTrue(app.staticTexts["Liam Brown"].exists)
+        XCTAssertTrue(app.staticTexts["Ethan Lee"].exists)
+
+        openEditTaskForm(app)
+
+        tapAfterScrolling(app.buttons["task-form.reviewer.\(DemoSeedUserID.noahKim)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.liamBrown)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.watcher.\(DemoSeedUserID.ethanLee)"], in: app)
+        app.buttons["task-form.save"].tap()
+
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        assertTaskShowsNoReviewersOrWatchers(app)
+
+        goBack(app)
+        XCTAssertTrue(app.staticTexts[taskTitle].waitForExistence(timeout: 10))
+        app.staticTexts[taskTitle].tap()
+
+        XCTAssertTrue(app.staticTexts["task.title"].waitForExistence(timeout: 10))
+        assertTaskShowsNoReviewersOrWatchers(app)
+    }
 
     // TODO: Edge journey: cancel delete at the confirmation alert.
     // Purpose:
@@ -335,6 +370,14 @@ private extension DemoUITests {
         XCTAssertTrue(app.buttons["task-form.save"].waitForExistence(timeout: 10))
     }
 
+    func deleteTaskFromProject(_ app: XCUIApplication, title: String) {
+        let taskTitle = app.staticTexts[title]
+        XCTAssertTrue(taskTitle.waitForExistence(timeout: 10))
+        taskTitle.swipeLeft()
+        app.buttons["Delete"].tap()
+        app.alerts["Delete Task?"].buttons["Delete"].tap()
+    }
+
     func waitUntilEnabled(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
         let predicate = NSPredicate(format: "enabled == true")
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
@@ -375,5 +418,12 @@ private extension DemoUITests {
         }
 
         element.typeText(text)
+    }
+
+    func assertTaskShowsNoReviewersOrWatchers(_ app: XCUIApplication) {
+        XCTAssertFalse(app.staticTexts["Noah Kim"].exists)
+        XCTAssertFalse(app.staticTexts["Liam Brown"].exists)
+        XCTAssertFalse(app.staticTexts["Ethan Lee"].exists)
+        XCTAssertGreaterThanOrEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", "None")).count, 2)
     }
 }
