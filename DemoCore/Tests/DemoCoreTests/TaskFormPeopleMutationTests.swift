@@ -87,17 +87,17 @@ final class TaskFormPeopleMutationTests: XCTestCase {
         let detailMachine = TaskDetailMachine(taskID: taskID, syncContainer: syncContainer, syncEngine: engine)
         detailMachine.send(.onAppear)
         try await waitUntil {
-            detailMachine.detail?.taskID == taskID
-                && detailMachine.detail?.reviewerIDs == [DemoSeedData.SeedIDs.Users.noahKim]
-                && detailMachine.detail?.watcherIDs
+            detailMachine.task?.id == taskID
+                && detailMachine.task?.reviewers.map(\.id).sorted() == [DemoSeedData.SeedIDs.Users.noahKim]
+                && detailMachine.task?.watchers.map(\.id).sorted()
                     == [DemoSeedData.SeedIDs.Users.ethanLee, DemoSeedData.SeedIDs.Users.liamBrown].sorted()
         }
 
         let spy = ObservationSpy {
             (
-                detailMachine.detail?.assigneeName,
-                detailMachine.detail?.reviewerIDs ?? [],
-                detailMachine.detail?.watcherIDs ?? []
+                detailMachine.task?.assignee?.displayName,
+                detailMachine.task?.reviewers.map(\.id).sorted() ?? [],
+                detailMachine.task?.watchers.map(\.id).sorted() ?? []
             )
         }
 
@@ -130,9 +130,9 @@ final class TaskFormPeopleMutationTests: XCTestCase {
         await fulfillment(of: [saved], timeout: 10)
 
         try await waitUntil {
-            detailMachine.detail?.assigneeName == "Mia Patel"
-                && detailMachine.detail?.reviewerIDs == [DemoSeedData.SeedIDs.Users.sofiaGarcia]
-                && detailMachine.detail?.watcherIDs
+            detailMachine.task?.assignee?.displayName == "Mia Patel"
+                && detailMachine.task?.reviewers.map(\.id).sorted() == [DemoSeedData.SeedIDs.Users.sofiaGarcia]
+                && detailMachine.task?.watchers.map(\.id).sorted()
                     == [DemoSeedData.SeedIDs.Users.liamBrown, DemoSeedData.SeedIDs.Users.sofiaGarcia].sorted()
         }
 

@@ -1,4 +1,3 @@
-import SwiftData
 import DemoCore
 import SwiftSync
 import SwiftUI
@@ -8,9 +7,7 @@ struct TaskView: View {
     let syncContainer: SyncContainer
     let syncEngine: DemoSyncEngine
 
-    @State private var taskPublisher: SyncModelPublisher<Task>
-    @State private var itemPublisher: SyncQueryPublisher<Item>
-    @State private var loadMachine: ScreenLoadMachine
+    @State private var machine: TaskDetailMachine
     @State private var showingEditSheet = false
 
     init(taskID: String, syncContainer: SyncContainer, syncEngine: DemoSyncEngine) {
@@ -18,68 +15,36 @@ struct TaskView: View {
         self.syncContainer = syncContainer
         self.syncEngine = syncEngine
 
-        _taskPublisher = State(
-            initialValue: SyncModelPublisher(Task.self, id: taskID, in: syncContainer)
-        )
-        _itemPublisher = State(
-            initialValue: SyncQueryPublisher(
-                Item.self,
-                relationship: \Item.task,
-                relationshipID: taskID,
-                in: syncContainer,
-                sortBy: [
-                    SortDescriptor(\Item.position, order: .forward),
-                    SortDescriptor(\Item.id, order: .forward)
-                ]
-            )
-        )
-        _loadMachine = State(
-            initialValue: ScreenLoadMachine { error in
-                presentError(error, fallbackMessage: "Could not load this task yet.")
-            }
+        _machine = State(
+            initialValue: TaskDetailMachine(taskID: taskID, syncContainer: syncContainer, syncEngine: syncEngine)
         )
     }
 
     var body: some View {
         List { content }
-        .accessibilityIdentifier("task.detail")
-        .navigationTitle("Task")
-        .toolbar { toolbarContent }
-        .task(loadTask)
-        .animation(.snappy(duration: 0.2), value: itemIDs)
-        .animation(.snappy(duration: 0.2), value: reviewerIDs)
-        .animation(.snappy(duration: 0.2), value: watcherIDs)
-        .sheet(isPresented: $showingEditSheet) { editTaskSheet }
+            .accessibilityIdentifier("task.detail")
+            .navigationTitle("Task")
+            .toolbar { toolbarContent }
+            .task(loadTask)
+            .animation(.snappy(duration: 0.2), value: itemIDs)
+            .animation(.snappy(duration: 0.2), value: reviewerIDs)
+            .animation(.snappy(duration: 0.2), value: watcherIDs)
+            .sheet(isPresented: $showingEditSheet) { editTaskSheet }
     }
 }
 
 extension TaskView {
     var task: Task? {
-        taskPublisher.row
-    }
-
-    var loadState: ScreenLoadState {
-        loadMachine.state
-    }
-
-    var loadErrorPresentation: ErrorPresentationState? {
-        loadState.errorPresentation
-    }
-
-    var contentState: TaskDetailContentState {
-        if task != nil {
-            return .content
-        }
-        return loadState.isLoading ? .loading : .notFound
+        machine.task
     }
 
     @ViewBuilder
     var content: some View {
-        if let presentation = loadErrorPresentation {
+        if let presentation = machine.loadErrorPresentation {
             errorSection(presentation)
         }
 
-        switch contentState {
+        switch machine.contentState {
         case .loading:
             Section {
                 LabeledContent("Status") {
@@ -122,7 +87,7 @@ extension TaskView {
     }
 
     var itemIDs: [String] {
-        itemPublisher.rows.map(\.id)
+        machine.items.map(\.id)
     }
 
     var reviewerIDs: [String] {
@@ -196,11 +161,11 @@ extension TaskView {
     var itemsSection: some View {
         if task != nil {
             Section("Items") {
-                if itemPublisher.rows.isEmpty {
+                if machine.items.isEmpty {
                     Text("No items")
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(itemPublisher.rows, id: \.id) { item in
+                    ForEach(machine.items, id: \.id) { item in
                         Text(item.title)
                             .foregroundStyle(.primary)
                     }
@@ -219,26 +184,21 @@ extension TaskView {
             }
 
             Section("Reviewers") {
-                if taskModel.reviewers.isEmpty {
+                if machine.reviewerNames.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(taskModel.reviewers.sorted { $0.displayName < $1.displayName }, id: \.id) { reviewer in
-                        Text(reviewer.displayName)
+                    ForEach(machine.reviewerNames, id: \.self) { reviewerName in
+                        Text(reviewerName)
                     }
                 }
             }
 
             Section("Watchers") {
-                if taskModel.watchers.isEmpty {
+                if machine.watcherNames.isEmpty {
                     Text("None").foregroundStyle(.secondary)
                 } else {
-                    ForEach(
-                        taskModel.watchers.sorted {
-                            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-                        },
-                        id: \.id
-                    ) { watcher in
-                        Text(watcher.displayName)
+                    ForEach(machine.watcherNames, id: \.self) { watcherName in
+                        Text(watcherName)
                     }
                 }
             }
@@ -247,8 +207,6 @@ extension TaskView {
 
     @Sendable
     func loadTask() async {
-        loadMachine.send(.onAppear) { [syncEngine, taskID] in
-            try await syncEngine.syncTaskDetail(taskID: taskID)
-        }
+        machine.send(.onAppear)
     }
 }

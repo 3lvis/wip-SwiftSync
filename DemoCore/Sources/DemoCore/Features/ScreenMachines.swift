@@ -27,36 +27,6 @@ public enum TaskDetailContentState: Equatable {
     case notFound
 }
 
-public struct TaskDetailViewState: Equatable {
-    public let taskID: String
-    public let title: String
-    public let stateLabel: String
-    public let authorName: String
-    public let descriptionText: String
-    public let assigneeName: String
-    public let hasAssignee: Bool
-    public let reviewerNames: [String]
-    public let reviewerIDs: [String]
-    public let watcherNames: [String]
-    public let watcherIDs: [String]
-
-    init(task: Task) {
-        taskID = task.id
-        title = task.title
-        stateLabel = task.stateLabel
-        authorName = task.author?.displayName ?? "Unknown"
-        descriptionText = task.descriptionText
-        assigneeName = task.assignee?.displayName ?? "Unassigned"
-        hasAssignee = task.assignee != nil
-        reviewerNames = task.reviewers.map(\.displayName).sorted()
-        reviewerIDs = task.reviewers.map(\.id).sorted()
-        watcherNames = task.watchers
-            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-            .map(\.displayName)
-        watcherIDs = task.watchers.map(\.id).sorted()
-    }
-}
-
 public enum TaskFormOptionsState: Equatable {
     case loading
     case available
@@ -243,10 +213,24 @@ public final class ProjectDetailMachine {
 @Observable
 public final class TaskDetailMachine {
     public private(set) var loadState: ScreenLoadState = .idle
-    public private(set) var detail: TaskDetailViewState?
-    public private(set) var items: [Item] = []
+    public var task: Task? {
+        taskPublisher.row
+    }
+    public var items: [Item] {
+        itemPublisher.rows
+    }
+    public var reviewerNames: [String] {
+        guard let task else { return [] }
+        return task.reviewers.map(\.displayName).sorted()
+    }
+    public var watcherNames: [String] {
+        guard let task else { return [] }
+        return task.watchers
+            .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+            .map(\.displayName)
+    }
     public var contentState: TaskDetailContentState {
-        resolveTaskDetailContentState(loadState: loadState, hasTask: detail != nil)
+        resolveTaskDetailContentState(loadState: loadState, hasTask: task != nil)
     }
     public var loadErrorPresentation: ErrorPresentationState? {
         loadState.errorPresentation
@@ -277,18 +261,8 @@ public final class TaskDetailMachine {
         }
 
         observeContinuously {
-            self.detail = self.taskPublisher.row.map(TaskDetailViewState.init)
-        }
-        observeContinuously {
-            self.items = self.itemPublisher.rows
-        }
-        observeContinuously {
             self.loadState = self.loadMachine.state
         }
-    }
-
-    public var editableTask: Task? {
-        taskPublisher.row
     }
 
     public func send(_ event: ScreenLoadEvent) {

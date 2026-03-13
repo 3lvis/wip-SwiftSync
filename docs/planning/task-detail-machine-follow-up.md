@@ -72,10 +72,3 @@ The next `TaskDetailMachine` should:
 - preserve the task-detail UI regression as the end-to-end proof
 
 ## Open items
-
-- [ ] Define the intended long-term contract for `TaskDetailMachine`: orchestration only, derived screen state, or direct publisher ownership behind a thin facade
-- [ ] Pick one replacement observation strategy that does not depend on the stale machine pattern proven by the old implementation
-- [ ] Rebuild `TaskDetailMachine` from the clean direct-view baseline instead of trimming one of the exploratory machine branches
-- [ ] Add focused tests that prove the new machine refreshes correctly after same-identity people edits
-- [ ] Re-run `DemoUITests.testEditTaskPeopleFlow` against the rebuilt machine and keep it as the user-facing regression proof
-- [ ] Update `docs/project/reactive-reads.md` once the final machine shape is chosen so the guidance matches the shipped pattern
