@@ -48,9 +48,6 @@ struct TaskFormSheet: View {
             let taskID = task.id
             let descriptor = FetchDescriptor<Task>(predicate: #Predicate { $0.id == taskID })
             let fetched = (try? ctx.fetch(descriptor))?.first
-            if let fetched {
-                Self.hydratePeopleRelationships(on: fetched, from: task, in: ctx)
-            }
             // Fallback should never be reached in practice — the row is always in the store.
             // If it somehow is, we fall back to the passed object (which lives in mainContext,
             // so edits won't reach the store either, preserving the no-save guarantee).
@@ -238,16 +235,6 @@ extension TaskFormSheet {
     func displayName(for userID: String?) -> String? {
         guard let userID else { return nil }
         return machine.users.first(where: { $0.id == userID })?.displayName
-    }
-
-    static func hydratePeopleRelationships(on draft: Task, from source: Task, in context: ModelContext) {
-        let users = (try? context.fetch(FetchDescriptor<User>())) ?? []
-        let usersByID = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
-
-        draft.reviewers = source.reviewers.compactMap { usersByID[$0.id] }
-        draft.watchers = source.watchers.compactMap { usersByID[$0.id] }
-        draft.author = usersByID[source.authorID]
-        draft.assignee = source.assigneeID.flatMap { usersByID[$0] }
     }
 
     fileprivate func summaryText(for route: PeoplePickerRoute) -> String {
