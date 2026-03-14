@@ -464,16 +464,8 @@ private extension DemoUITests {
         element.tap()
 
         if let currentValue = element.value as? String, !currentValue.isEmpty {
-            element.press(forDuration: 1.0)
-
-            if app.menuItems["Select All"].waitForExistence(timeout: 0.5) {
-                app.menuItems["Select All"].tap()
-            } else if app.buttons["Select All"].waitForExistence(timeout: 0.5) {
-                app.buttons["Select All"].tap()
-            } else {
-                let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)
-                element.typeText(deleteString)
-            }
+            let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)
+            element.typeText(deleteString)
         }
 
         element.typeText(text)

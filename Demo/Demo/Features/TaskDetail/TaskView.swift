@@ -23,6 +23,7 @@ struct TaskView: View {
     var body: some View {
         List { content }
             .accessibilityIdentifier("task.detail")
+            .listStyle(.plain)
             .navigationTitle("Task")
             .toolbar { toolbarContent }
             .task(loadTask)
@@ -101,7 +102,7 @@ extension TaskView {
     @ViewBuilder
     func errorSection(_ presentation: ErrorPresentationState) -> some View {
         Section {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(presentation.message)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -113,32 +114,31 @@ extension TaskView {
     var taskSection: some View {
         Section {
             if let taskModel = task {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(taskModel.title)
                         .font(.title2)
                         .fontWeight(.bold)
                         .accessibilityIdentifier("task.title")
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Text(taskModel.stateLabel)
                             .font(.caption)
                             .fontWeight(.medium)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
                             .background(Color.accentColor.opacity(0.15))
                             .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
                         Text(taskModel.author?.displayName ?? "Unknown")
                             .font(.caption)
                             .fontWeight(.medium)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
                             .background(Color(.systemGray5))
                             .foregroundStyle(.secondary)
                             .clipShape(Capsule())
                             .accessibilityIdentifier("task.author")
                     }
                 }
-                .padding(.vertical, 4)
             } else {
                 Text("Task details unavailable")
                     .foregroundStyle(.secondary)
