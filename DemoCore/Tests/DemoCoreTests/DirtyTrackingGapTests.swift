@@ -50,10 +50,8 @@ final class DirtyTrackingGapTests: XCTestCase {
     private func runDirtyTrackingTest(container: ModelContainer, label: String) async throws {
         let mainContext = container.mainContext
 
-        let user1 = User(id: "u1", displayName: "Alice", role: "dev", roleLabel: "Developer",
-                         createdAt: Date(), updatedAt: Date())
-        let user2 = User(id: "u2", displayName: "Bob", role: "dev", roleLabel: "Developer",
-                         createdAt: Date(), updatedAt: Date())
+        let user1 = User(id: "u1", displayName: "Alice", createdAt: Date(), updatedAt: Date())
+        let user2 = User(id: "u2", displayName: "Bob", createdAt: Date(), updatedAt: Date())
         let task = Task(id: "t1", projectID: "p1", assigneeID: nil, authorID: "u1",
                         title: "Test Task", descriptionText: "", state: "open", stateLabel: "Open",
                         createdAt: Date(), updatedAt: Date())

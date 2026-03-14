@@ -18,14 +18,12 @@ public struct DemoSeedData {
     public struct SeedUser: Sendable {
         public let id: String
         public let displayName: String
-        public let role: String
         public let createdAt: Date
         public let updatedAt: Date
 
-        public init(id: String, displayName: String, role: String, createdAt: Date, updatedAt: Date) {
+        public init(id: String, displayName: String, createdAt: Date, updatedAt: Date) {
             self.id = id
             self.displayName = displayName
-            self.role = role
             self.createdAt = createdAt
             self.updatedAt = updatedAt
         }
@@ -171,12 +169,12 @@ public struct DemoSeedData {
         ]
 
         let users: [SeedUser] = [
-            .init(id: u.avaMartinez, displayName: "Ava Martinez", role: "iOS Engineer",     createdAt: at(60),  updatedAt: at(60)),
-            .init(id: u.noahKim,     displayName: "Noah Kim",      role: "Backend Engineer", createdAt: at(70),  updatedAt: at(70)),
-            .init(id: u.miaPatel,    displayName: "Mia Patel",     role: "Product Designer", createdAt: at(80),  updatedAt: at(80)),
-            .init(id: u.liamBrown,   displayName: "Liam Brown",    role: "Product Manager",  createdAt: at(90),  updatedAt: at(90)),
-            .init(id: u.sofiaGarcia, displayName: "Sofia Garcia",  role: "QA Engineer",      createdAt: at(100), updatedAt: at(100)),
-            .init(id: u.ethanLee,    displayName: "Ethan Lee",     role: "DevOps Engineer",  createdAt: at(110), updatedAt: at(110))
+            .init(id: u.avaMartinez, displayName: "Ava Martinez", createdAt: at(60),  updatedAt: at(60)),
+            .init(id: u.noahKim,     displayName: "Noah Kim", createdAt: at(70),  updatedAt: at(70)),
+            .init(id: u.miaPatel,    displayName: "Mia Patel", createdAt: at(80),  updatedAt: at(80)),
+            .init(id: u.liamBrown,   displayName: "Liam Brown", createdAt: at(90),  updatedAt: at(90)),
+            .init(id: u.sofiaGarcia, displayName: "Sofia Garcia", createdAt: at(100), updatedAt: at(100)),
+            .init(id: u.ethanLee,    displayName: "Ethan Lee", createdAt: at(110), updatedAt: at(110))
         ]
 
         let tasks: [SeedTask] = [

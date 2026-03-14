@@ -34,18 +34,12 @@ public final class Project {
 public final class User {
     @Attribute(.unique) public var id: String
     public var displayName: String
-    @RemoteKey("role.id")
-    public var role: String
-    @RemoteKey("role.label")
-    public var roleLabel: String
     public var createdAt: Date
     public var updatedAt: Date
 
-    public init(id: String, displayName: String, role: String, roleLabel: String, createdAt: Date, updatedAt: Date) {
+    public init(id: String, displayName: String, createdAt: Date, updatedAt: Date) {
         self.id = id
         self.displayName = displayName
-        self.role = role
-        self.roleLabel = roleLabel
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

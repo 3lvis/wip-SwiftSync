@@ -17,13 +17,11 @@ final class DemoBackendTests: XCTestCase {
         let projects = try backend.getProjectsPayload()
         let users = try backend.getUsersPayload()
         let taskStates = try backend.getTaskStateOptionsPayload()
-        let userRoles = try backend.getUserRoleOptionsPayload()
         let projectTasks = try backend.getProjectTasksPayload(projectID: projectID)
 
         XCTAssertEqual(projects.count, 1)
         XCTAssertEqual(users.count, 1)
         XCTAssertEqual(taskStates.count, 3)
-        XCTAssertEqual(userRoles.count, 1)
         XCTAssertEqual(projectTasks.count, 1)
 
         XCTAssertNotNil(projects.first?["created_at"])
@@ -31,12 +29,10 @@ final class DemoBackendTests: XCTestCase {
         XCTAssertNotNil(users.first?["created_at"])
         XCTAssertNotNil(users.first?["updated_at"])
         XCTAssertNotNil(taskStates.first?["created_at"])
-        XCTAssertNotNil(userRoles.first?["created_at"])
         XCTAssertNotNil(projectTasks.first?["created_at"])
         XCTAssertNotNil(projectTasks.first?["updated_at"])
 
-        XCTAssertEqual((users.first?["role"] as? [String: Any])?["id"] as? String, "Engineer")
-        XCTAssertEqual((users.first?["role"] as? [String: Any])?["label"] as? String, "Engineer")
+        XCTAssertNil(users.first?["role"])
         XCTAssertNil(users.first?["avatar_seed"])
         XCTAssertNil(projectTasks.first?["due_date"])
         XCTAssertEqual(projectTasks.first?["reviewer_ids"] as? [String], [userID])
@@ -52,7 +48,6 @@ final class DemoBackendTests: XCTestCase {
         XCTAssertNotNil(projectTasks.first?["description"])
         XCTAssertEqual(taskStates.map { $0["id"] as? String }, ["todo", "inProgress", "done"])
         XCTAssertEqual(taskStates.map { ($0["label"] as? String) ?? "" }, ["To Do", "In Progress", "Done"])
-        XCTAssertEqual(userRoles.map { $0["id"] as? String }, ["Engineer"])
     }
 
     func testSQLiteBackendSeedEntityIDsAreUUIDs() throws {
@@ -715,7 +710,7 @@ final class DemoBackendTests: XCTestCase {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         return DemoSeedData(
             projects: [.init(id: projectID, name: "Project", createdAt: now, updatedAt: now)],
-            users: [.init(id: userID, displayName: "User", role: "Engineer", createdAt: now, updatedAt: now)],
+            users: [.init(id: userID, displayName: "User", createdAt: now, updatedAt: now)],
             tasks: [
                 .init(
                     id: taskID,

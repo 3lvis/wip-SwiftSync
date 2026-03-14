@@ -9,10 +9,13 @@
 - [x] Make seeded task authors explicit so detail chips do not usually duplicate assignees
 - [x] Update any UI expectations that depended on fallback seed authors
 - [x] Rebuild the demo app and record the latest state
+- [x] Remove `role` from demo backend seed data, backend payload/schema, and app `User` model
+- [x] Remove or update tests and helper code that still expect user roles
+- [x] Run relevant verification and record the latest state
 
 ## Last known state
 
-`xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed after shortening seeded task descriptions
+`swift test` passed after removing user role data from the demo backend and app models
 
 ## Decisions (don't revisit)
 
@@ -20,6 +23,7 @@
 - Keep task editing improvements scoped to `Demo/Demo/**` and `Demo/DemoUITests/**`; no library changes are planned
 - Remove the completed planning file instead of leaving stale unchecked items in `docs/planning`
 - The demo seed fallback currently makes `authorID` match `assigneeID` when author is omitted, so differing roles require explicit seed authors
+- User `role` is demo metadata only; it is not part of the current task UI contract
 
 ## Files touched
 
@@ -27,5 +31,7 @@
 - Demo/Demo/Features/TaskForm/TaskFormSheet.swift
 - Demo/Demo/Features/TaskDetail/TaskView.swift
 - DemoBackend/Sources/DemoBackend/DemoSeedData.swift
+- DemoBackend/Sources/DemoBackend/DemoServerSimulator.swift
+- DemoCore/Sources/DemoCore/Models/DemoModels.swift
 - Demo/DemoUITests/DemoUITests.swift
 - docs/planning/task-form-people-scaling.md

@@ -101,7 +101,7 @@ public final class DemoServerSimulator {
     public func getUsersPayload() throws -> [[String: Any]] {
         let rows = try self.sqlite.query(
             """
-            SELECT id, display_name, role, created_at, updated_at
+            SELECT id, display_name, created_at, updated_at
             FROM users
             ORDER BY id ASC
             """
@@ -110,7 +110,6 @@ public final class DemoServerSimulator {
             [
                 "id": row.string("id"),
                 "display_name": row.string("display_name"),
-                "role": labeledValuePayload(id: row.string("role"), label: row.string("role")),
                 "created_at": iso8601(row.double("created_at")),
                 "updated_at": iso8601(row.double("updated_at"))
             ]
@@ -142,18 +141,6 @@ public final class DemoServerSimulator {
                 "updated_at": timestamp
             ]
         ]
-    }
-
-    public func getUserRoleOptionsPayload() throws -> [[String: Any]] {
-        try optionsPayload(
-            rows: self.sqlite.query(
-                """
-                SELECT DISTINCT role AS id
-                FROM users
-                ORDER BY role ASC
-                """
-            )
-        )
     }
 
     public func getTaskDetailPayload(taskID: String) throws -> [String: Any]? {
@@ -960,7 +947,6 @@ public final class DemoServerSimulator {
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 display_name TEXT NOT NULL,
-                role TEXT NOT NULL,
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL
             );
@@ -1035,15 +1021,14 @@ public final class DemoServerSimulator {
             for user in seedData.users {
                 try sqlite.execute(
                     """
-                    INSERT INTO users (id, display_name, role, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO users (id, display_name, created_at, updated_at)
+                    VALUES (?, ?, ?, ?)
                     """,
                     bind: { stmt in
                         sqlite.bind(text: user.id, at: 1, in: stmt)
                         sqlite.bind(text: user.displayName, at: 2, in: stmt)
-                        sqlite.bind(text: user.role, at: 3, in: stmt)
-                        sqlite.bind(double: user.createdAt.timeIntervalSince1970, at: 4, in: stmt)
-                        sqlite.bind(double: user.updatedAt.timeIntervalSince1970, at: 5, in: stmt)
+                        sqlite.bind(double: user.createdAt.timeIntervalSince1970, at: 3, in: stmt)
+                        sqlite.bind(double: user.updatedAt.timeIntervalSince1970, at: 4, in: stmt)
                     }
                 )
             }
