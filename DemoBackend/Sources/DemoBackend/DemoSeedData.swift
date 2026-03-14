@@ -185,12 +185,9 @@ public struct DemoSeedData {
                 projectID: p.accountSecurity,
                 assigneeID: u.avaMartinez,
                 reviewerIDs: [u.liamBrown],
+                authorID: u.liamBrown,
                 title: "Add session timeout controls to account settings",
-                descriptionText: """
-                Build the mobile settings UI for session timeout and forced re-authentication controls.
-
-                This is the primary demo task for account-security work and is intentionally rich: it has an assignee.
-                """,
+                descriptionText: "Keep session controls clear and safe for account-security settings.",
                 state: "inProgress",
                 watcherIDs: [u.noahKim, u.sofiaGarcia],
                 createdAt: at(300), updatedAt: at(300)
@@ -200,10 +197,9 @@ public struct DemoSeedData {
                 projectID: p.accountSecurity,
                 assigneeID: u.noahKim,
                 reviewerIDs: [u.avaMartinez],
+                authorID: u.liamBrown,
                 title: "Validate security policy PATCH payload on backend",
-                descriptionText: """
-                Enforce allowed values for timeout minutes and re-auth policy. Reject unknown keys so mobile payloads stay explicit.
-                """,
+                descriptionText: "Protect the API contract for security settings updates.",
                 state: "todo",
                 watcherIDs: [u.liamBrown],
                 createdAt: at(305), updatedAt: at(305)
@@ -213,10 +209,9 @@ public struct DemoSeedData {
                 projectID: p.accountSecurity,
                 assigneeID: u.sofiaGarcia,
                 reviewerIDs: [u.liamBrown],
+                authorID: u.miaPatel,
                 title: "Write QA item list for forced re-auth scenarios",
-                descriptionText: """
-                Cover app relaunch, expired session recovery, and offline-to-online transitions after the policy changes.
-                """,
+                descriptionText: "Catch risky session recovery regressions before rollout.",
                 state: "todo",
                 watcherIDs: [u.avaMartinez, u.miaPatel],
                 createdAt: at(310), updatedAt: at(310)
@@ -226,10 +221,9 @@ public struct DemoSeedData {
                 projectID: p.accountSecurity,
                 assigneeID: u.miaPatel,
                 reviewerIDs: [u.avaMartinez],
+                authorID: u.liamBrown,
                 title: "Polish warning copy and hierarchy in security settings",
-                descriptionText: """
-                Refine the warning copy and screen hierarchy so risky actions are clear without blocking the flow.
-                """,
+                descriptionText: "Make risky security actions easier to understand at a glance.",
                 state: "done",
                 watcherIDs: [u.liamBrown],
                 createdAt: at(315), updatedAt: at(315)
@@ -239,10 +233,9 @@ public struct DemoSeedData {
                 projectID: p.accountSecurity,
                 assigneeID: u.ethanLee,
                 reviewerIDs: [u.noahKim],
+                authorID: u.avaMartinez,
                 title: "Enable rollout flag for account security controls",
-                descriptionText: """
-                Prepare release gating so the feature can be enabled per environment after QA sign-off.
-                """,
+                descriptionText: "Enable a controlled rollout after QA approval.",
                 state: "inProgress",
                 watcherIDs: [u.liamBrown, u.sofiaGarcia],
                 createdAt: at(320), updatedAt: at(320)
@@ -252,10 +245,9 @@ public struct DemoSeedData {
                 projectID: p.notificationsReliability,
                 assigneeID: u.avaMartinez,
                 reviewerIDs: [u.noahKim],
+                authorID: u.liamBrown,
                 title: "Fix duplicate push preference sync after reconnect",
-                descriptionText: """
-                The preferences screen can duplicate local rows after reconnect. Backend remains correct; the client refresh path needs better scoped sync.
-                """,
+                descriptionText: "Stop duplicate rows from eroding trust after reconnect.",
                 state: "inProgress",
                 watcherIDs: [u.liamBrown, u.ethanLee],
                 createdAt: at(330), updatedAt: at(330)
@@ -265,10 +257,9 @@ public struct DemoSeedData {
                 projectID: p.notificationsReliability,
                 assigneeID: u.noahKim,
                 reviewerIDs: [u.ethanLee],
+                authorID: u.avaMartinez,
                 title: "Add idempotency guard to notification preference writes",
-                descriptionText: """
-                Prevent duplicate writes when the same save is retried. Keep the response payload stable for targeted refresh.
-                """,
+                descriptionText: "Make repeated saves safe and predictable.",
                 state: "todo",
                 watcherIDs: [u.avaMartinez, u.liamBrown],
                 createdAt: at(335), updatedAt: at(335)
@@ -278,10 +269,9 @@ public struct DemoSeedData {
                 projectID: p.notificationsReliability,
                 assigneeID: u.sofiaGarcia,
                 reviewerIDs: [u.noahKim],
+                authorID: u.ethanLee,
                 title: "Verify scoped delete behavior for removed notification channels",
-                descriptionText: """
-                Confirm channel lists only delete rows inside the synced parent scope and never remove channels from other users/projects.
-                """,
+                descriptionText: "Prevent scoped deletes from removing the wrong channels.",
                 state: "todo",
                 watcherIDs: [u.liamBrown],
                 createdAt: at(340), updatedAt: at(340)
@@ -291,10 +281,9 @@ public struct DemoSeedData {
                 projectID: p.notificationsReliability,
                 assigneeID: nil,
                 reviewerIDs: [u.liamBrown],
+                authorID: u.miaPatel,
                 title: "Draft incident playbook for notification delivery degradation",
-                descriptionText: """
-                Capture triage steps, rollback criteria, and communication templates. This task starts unassigned to demonstrate null assignee handling.
-                """,
+                descriptionText: "Speed up response during notification delivery incidents.",
                 state: "todo",
                 watcherIDs: [u.noahKim, u.ethanLee],
                 createdAt: at(345), updatedAt: at(345)
@@ -303,10 +292,9 @@ public struct DemoSeedData {
                 id: t.assigneeChip,
                 projectID: p.supportInbox,
                 assigneeID: u.miaPatel,
+                authorID: u.liamBrown,
                 title: "Add assignee chip to support conversation rows",
-                descriptionText: """
-                Show assigned owner directly in the inbox list to reduce context switching for support agents.
-                """,
+                descriptionText: "Help support agents see ownership without opening each thread.",
                 state: "inProgress",
                 createdAt: at(350), updatedAt: at(350)
             ),
@@ -314,10 +302,9 @@ public struct DemoSeedData {
                 id: t.inboxFilterKeys,
                 projectID: p.supportInbox,
                 assigneeID: u.noahKim,
+                authorID: u.avaMartinez,
                 title: "Normalize inbox filter payload keys across clients",
-                descriptionText: """
-                Align filter key naming across iOS and backend so imports/exports and analytics events use the same contract.
-                """,
+                descriptionText: "Keep filters consistent across clients and backend services.",
                 state: "done",
                 createdAt: at(355), updatedAt: at(355)
             ),
@@ -325,10 +312,9 @@ public struct DemoSeedData {
                 id: t.regressionChecks,
                 projectID: p.supportInbox,
                 assigneeID: u.sofiaGarcia,
+                authorID: u.miaPatel,
                 title: "Backfill regression checks for task detail edits",
-                descriptionText: """
-                Add regression coverage for failed saves, retry UI, and list refresh after task edits.
-                """,
+                descriptionText: "Reduce regressions in task editing flows.",
                 state: "inProgress",
                 createdAt: at(360), updatedAt: at(360)
             )

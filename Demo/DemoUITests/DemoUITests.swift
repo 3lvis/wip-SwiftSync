@@ -66,7 +66,7 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["task.title"].exists)
         XCTAssertEqual(app.staticTexts["task.title"].label, "Add session timeout controls to account settings")
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Ava Martinez")
-        XCTAssertEqual(app.staticTexts["task.author"].label, "Ava Martinez")
+        XCTAssertEqual(app.staticTexts["task.author"].label, "Liam Brown")
         XCTAssertTrue(findAfterScrolling(app.staticTexts["Gather requirements"], in: app))
         XCTAssertTrue(findAfterScrolling(app.staticTexts["Draft implementation plan"], in: app))
     }

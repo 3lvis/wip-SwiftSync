@@ -24,6 +24,7 @@ struct TaskView: View {
         List { content }
             .accessibilityIdentifier("task.detail")
             .listStyle(.plain)
+            .listSectionSpacing(.compact)
             .navigationTitle("Task")
             .toolbar { toolbarContent }
             .task(loadTask)
@@ -128,15 +129,16 @@ extension TaskView {
                             .background(Color.accentColor.opacity(0.15))
                             .foregroundStyle(Color.accentColor)
                             .clipShape(Capsule())
-                        Text(taskModel.author?.displayName ?? "Unknown")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemGray5))
-                            .foregroundStyle(.secondary)
-                            .clipShape(Capsule())
-                            .accessibilityIdentifier("task.author")
+                        personChip(
+                            role: "Author",
+                            name: taskModel.author?.displayName ?? "Unknown",
+                            identifier: "task.author"
+                        )
+                        personChip(
+                            role: "Assignee",
+                            name: taskModel.assignee?.displayName ?? "Unassigned",
+                            identifier: "task.assignee"
+                        )
                     }
                 }
             } else {
@@ -177,12 +179,6 @@ extension TaskView {
     @ViewBuilder
     var peopleSection: some View {
         if let taskModel = task {
-            Section("Assignee") {
-                Text(taskModel.assignee?.displayName ?? "Unassigned")
-                    .foregroundStyle(taskModel.assignee == nil ? .secondary : .primary)
-                    .accessibilityIdentifier("task.assignee")
-            }
-
             Section("Reviewers") {
                 if taskModel.reviewers.isEmpty {
                     Text("None").foregroundStyle(.secondary)
@@ -210,5 +206,23 @@ extension TaskView {
     @Sendable
     func loadTask() async {
         machine.send(.onAppear)
+    }
+
+    func personChip(role: String, name: String, identifier: String) -> some View {
+        HStack(spacing: 4) {
+            Text(role)
+                .foregroundStyle(.secondary)
+            Text(name)
+                .foregroundStyle(.primary)
+        }
+        .font(.caption)
+        .fontWeight(.medium)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color(.systemGray5))
+        .clipShape(Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier(identifier)
+        .accessibilityLabel(name)
     }
 }
