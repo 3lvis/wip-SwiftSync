@@ -75,6 +75,7 @@ final class DemoUITests: XCTestCase {
     func testUpdateTaskTitleKeepsProjectAndDetailInSync() throws {
         let app = configuredApp()
         let updatedTitle = uniqueTitle(prefix: "UI Title Update")
+        let normalizedDescription = "No description yet."
 
         app.launch()
         openTaskDetail(
@@ -86,10 +87,12 @@ final class DemoUITests: XCTestCase {
         openEditTaskForm(app)
 
         replaceText(in: app.textViews["task-form.title"], with: updatedTitle, app: app)
+        replaceText(in: app.textFields["task-form.description"], with: "", app: app)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
         XCTAssertEqual(detailElement(app, id: "task.title").label, updatedTitle)
+        XCTAssertEqual(detailElement(app, id: "task.description").label, normalizedDescription)
 
         goBack(app)
         XCTAssertTrue(app.staticTexts[updatedTitle].exists)
@@ -225,26 +228,48 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Write QA item list for forced re-auth scenarios"].exists)
     }
 
-    // TODO: Edge journey: cancel create.
-    // Purpose:
-    // - prove leaving the create form does not persist partial draft data
-    //
-    // @MainActor
-    // func testCancelCreateDoesNotPersistTask() throws {}
+    @MainActor
+    func testCancelCreateDoesNotPersistTask() throws {
+        let app = configuredApp()
+        let draftTitle = uniqueTitle(prefix: "UI Cancel Create")
 
-    // TODO: Edge journey: cancel edit.
-    // Purpose:
-    // - prove leaving the edit form does not mutate the original task
-    //
-    // @MainActor
-    // func testCancelEditKeepsOriginalTaskValues() throws {}
+        app.launch()
+        openProject(app, id: DemoSeedProjectID.accountSecurity)
 
-    // TODO: Edge journey: normalize empty description.
-    // Purpose:
-    // - prove clearing description content saves as "No description yet."
-    //
-    // @MainActor
-    // func testEditTaskNormalizesEmptyDescription() throws {}
+        openCreateTaskForm(app)
+        replaceText(in: app.textViews["task-form.title"], with: draftTitle, app: app)
+        app.buttons["task-form.cancel"].tap()
+
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
+        XCTAssertFalse(app.staticTexts[draftTitle].exists)
+    }
+
+    @MainActor
+    func testCancelEditKeepsOriginalTaskValues() throws {
+        let app = configuredApp()
+        let originalTitle = "Add session timeout controls to account settings"
+        let editedTitle = uniqueTitle(prefix: "UI Cancel Edit")
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectID: DemoSeedProjectID.accountSecurity,
+            taskID: DemoSeedTaskID.sessionTimeout
+        )
+
+        XCTAssertEqual(detailElement(app, id: "task.title").label, originalTitle)
+
+        openEditTaskForm(app)
+        replaceText(in: app.textViews["task-form.title"], with: editedTitle, app: app)
+        app.buttons["task-form.cancel"].tap()
+
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
+        XCTAssertEqual(detailElement(app, id: "task.title").label, originalTitle)
+
+        goBack(app)
+        XCTAssertTrue(app.staticTexts[originalTitle].exists)
+        XCTAssertFalse(app.staticTexts[editedTitle].exists)
+    }
 
     @MainActor
     func testClearTaskReviewersOrWatchers() throws {
@@ -276,13 +301,6 @@ final class DemoUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.liamBrown)"].exists)
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
     }
-
-    // TODO: Edge journey: cancel delete at the confirmation alert.
-    // Purpose:
-    // - prove destructive intent is not applied unless confirmed
-    //
-    // @MainActor
-    // func testCancelDeleteKeepsTask() throws {}
 
     // TODO: Failure journey: empty project list.
     // Purpose:
