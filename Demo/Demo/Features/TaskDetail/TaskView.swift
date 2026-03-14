@@ -7,7 +7,7 @@ struct TaskView: View {
     let syncContainer: SyncContainer
     let syncEngine: DemoSyncEngine
 
-    @State private var machine: TaskDetailMachine
+    @State private var machine: TaskViewMachine
     @State private var showingEditSheet = false
 
     init(taskID: String, syncContainer: SyncContainer, syncEngine: DemoSyncEngine) {
@@ -16,7 +16,7 @@ struct TaskView: View {
         self.syncEngine = syncEngine
 
         _machine = State(
-            initialValue: TaskDetailMachine(taskID: taskID, syncContainer: syncContainer, syncEngine: syncEngine)
+            initialValue: TaskViewMachine(taskID: taskID, syncContainer: syncContainer, syncEngine: syncEngine)
         )
     }
 

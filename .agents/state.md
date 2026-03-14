@@ -12,10 +12,12 @@
 - [x] Remove `role` from demo backend seed data, backend payload/schema, and app `User` model
 - [x] Remove or update tests and helper code that still expect user roles
 - [x] Run relevant verification and record the latest state
+- [x] Rename screen machine types so they match the current view names
+- [x] Run relevant verification and record the latest state
 
 ## Last known state
 
-`swift test` passed after removing user role data from the demo backend and app models
+`swift test` passed; `xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed after renaming screen machines to match the views
 
 ## Decisions (don't revisit)
 

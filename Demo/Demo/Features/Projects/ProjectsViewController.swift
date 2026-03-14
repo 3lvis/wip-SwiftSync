@@ -6,7 +6,7 @@ final class ProjectsViewController: UITableViewController {
 
     private let onSelect: (String) -> Void
 
-    private let machine: ProjectsListMachine
+    private let machine: ProjectsViewMachine
 
     private lazy var statusContainer: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [statusIndicator, statusLabel])
@@ -47,7 +47,7 @@ final class ProjectsViewController: UITableViewController {
     @MainActor
     init(syncContainer: SyncContainer, syncEngine: DemoSyncEngine, onSelect: @escaping (String) -> Void) {
         self.onSelect = onSelect
-        self.machine = ProjectsListMachine(syncContainer: syncContainer, syncEngine: syncEngine)
+        self.machine = ProjectsViewMachine(syncContainer: syncContainer, syncEngine: syncEngine)
         super.init(style: .plain)
     }
 

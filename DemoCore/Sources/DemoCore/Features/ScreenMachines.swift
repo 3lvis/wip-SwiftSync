@@ -73,7 +73,7 @@ func resolveTaskFormOptionsState(loadState: ScreenLoadState, hasOptions: Bool) -
 
 @MainActor
 @Observable
-public final class ProjectsListMachine {
+public final class ProjectsViewMachine {
     public private(set) var loadState: ScreenLoadState = .idle
     public var rows: [Project] {
         rowsPublisher.rows
@@ -111,7 +111,7 @@ public final class ProjectsListMachine {
 
 @MainActor
 @Observable
-public final class ProjectDetailMachine {
+public final class ProjectViewMachine {
     public private(set) var loadState: ScreenLoadState = .idle
     public private(set) var deleteState: SubmissionState = .idle
     public var project: Project? {
@@ -208,7 +208,7 @@ public final class ProjectDetailMachine {
 
 @MainActor
 @Observable
-public final class TaskDetailMachine {
+public final class TaskViewMachine {
     public private(set) var loadState: ScreenLoadState = .idle
     public var task: Task? {
         taskPublisher.row
@@ -271,7 +271,7 @@ public final class TaskDetailMachine {
 
 @MainActor
 @Observable
-public final class TaskFormMachine {
+public final class TaskFormSheetMachine {
     public private(set) var users: [User] = []
     public private(set) var taskStateOptions: [TaskStateOption] = []
     public private(set) var metadataLoadState: ScreenLoadState = .idle

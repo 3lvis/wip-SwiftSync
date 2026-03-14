@@ -20,7 +20,7 @@ struct TaskFormSheet: View {
     // so the pickers can assign them directly without cross-context crashes.
     @State private var draft: Task
 
-    @State private var machine: TaskFormMachine
+    @State private var machine: TaskFormSheetMachine
     @State private var newItemTitle = ""
     @State private var itemEditMode: EditMode = .inactive
     @State private var activePeoplePicker: PeoplePickerRoute?
@@ -34,7 +34,7 @@ struct TaskFormSheet: View {
         ctx.autosaveEnabled = false
         self.editContext = ctx
         _machine = State(
-            initialValue: TaskFormMachine(syncContainer: syncContainer, syncEngine: syncEngine, editContext: ctx)
+            initialValue: TaskFormSheetMachine(syncContainer: syncContainer, syncEngine: syncEngine, editContext: ctx)
         )
 
         switch mode {

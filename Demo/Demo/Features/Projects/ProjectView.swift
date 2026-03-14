@@ -7,7 +7,7 @@ struct ProjectView: View {
     let syncContainer: SyncContainer
     let syncEngine: DemoSyncEngine
 
-    @State private var machine: ProjectDetailMachine
+    @State private var machine: ProjectViewMachine
     @State private var isShowingCreateTaskSheet = false
     @State private var taskPendingDelete: TaskDeletePrompt?
 
@@ -17,7 +17,7 @@ struct ProjectView: View {
         self.syncEngine = syncEngine
 
         _machine = State(
-            initialValue: ProjectDetailMachine(projectID: projectID, syncContainer: syncContainer, syncEngine: syncEngine)
+            initialValue: ProjectViewMachine(projectID: projectID, syncContainer: syncContainer, syncEngine: syncEngine)
         )
     }
 
