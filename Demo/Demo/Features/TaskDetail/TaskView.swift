@@ -55,7 +55,6 @@ extension TaskView {
             }
         case .content:
             taskSection
-            descriptionSection
             peopleSection
             itemsSection
         case .notFound:
@@ -120,6 +119,12 @@ extension TaskView {
                         .font(.title2)
                         .fontWeight(.bold)
                         .accessibilityIdentifier("task.title")
+                    if !taskModel.descriptionText.isEmpty {
+                        Text(taskModel.descriptionText)
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .accessibilityIdentifier("task.description")
+                    }
                     HStack(spacing: 6) {
                         Text(taskModel.stateLabel)
                             .font(.caption)
@@ -144,17 +149,6 @@ extension TaskView {
             } else {
                 Text("Task details unavailable")
                     .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    var descriptionSection: some View {
-        if let taskModel = task {
-            Section("Description") {
-                Text(taskModel.descriptionText)
-                    .font(.body)
-                    .accessibilityIdentifier("task.description")
             }
         }
     }
