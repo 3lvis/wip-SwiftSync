@@ -63,10 +63,10 @@ final class DemoUITests: XCTestCase {
         openProject(app, id: DemoSeedProjectID.accountSecurity)
         openTask(app, id: DemoSeedTaskID.sessionTimeout)
 
-        XCTAssertTrue(app.staticTexts["task.title"].exists)
-        XCTAssertEqual(app.staticTexts["task.title"].label, "Add session timeout controls to account settings")
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Ava Martinez")
-        XCTAssertEqual(app.staticTexts["task.author"].label, "Liam Brown")
+        XCTAssertTrue(detailElement(app, id: "task.title").exists)
+        XCTAssertEqual(detailElement(app, id: "task.title").label, "Add session timeout controls to account settings")
+        XCTAssertEqual(detailElement(app, id: "task.assignee").label, "Ava Martinez")
+        XCTAssertEqual(detailElement(app, id: "task.author").label, "Liam Brown")
         XCTAssertTrue(findAfterScrolling(app.staticTexts["Gather requirements"], in: app))
         XCTAssertTrue(findAfterScrolling(app.staticTexts["Draft implementation plan"], in: app))
     }
@@ -89,7 +89,7 @@ final class DemoUITests: XCTestCase {
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
-        XCTAssertEqual(app.staticTexts["task.title"].label, updatedTitle)
+        XCTAssertEqual(detailElement(app, id: "task.title").label, updatedTitle)
 
         goBack(app)
         XCTAssertTrue(app.staticTexts[updatedTitle].exists)
@@ -115,8 +115,8 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts[createdTitle].exists)
         app.staticTexts[createdTitle].tap()
 
-        XCTAssertTrue(app.staticTexts["task.title"].exists)
-        XCTAssertEqual(app.staticTexts["task.title"].label, createdTitle)
+        XCTAssertTrue(detailElement(app, id: "task.title").exists)
+        XCTAssertEqual(detailElement(app, id: "task.title").label, createdTitle)
     }
 
     @MainActor
@@ -164,31 +164,23 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        app.buttons["task-form.summary.assignee"].tap()
-        tapAfterScrolling(app.buttons["task-form.assignee.option.\(DemoSeedUserID.miaPatel)"], in: app)
-
-        openPeoplePicker(app, route: "reviewers")
-        tapAfterScrolling(app.buttons["task-form.reviewers.option.\(DemoSeedUserID.noahKim)"], in: app)
-        openPeoplePicker(app, route: "reviewers")
-        tapAfterScrolling(app.buttons["task-form.reviewers.option.\(DemoSeedUserID.sofiaGarcia)"], in: app)
-
-        openPeoplePicker(app, route: "watchers")
-        tapAfterScrolling(app.buttons["task-form.watchers.option.\(DemoSeedUserID.ethanLee)"], in: app)
-        openPeoplePicker(app, route: "watchers")
-        tapAfterScrolling(app.buttons["task-form.watchers.option.\(DemoSeedUserID.sofiaGarcia)"], in: app)
+        selectAssignee(app, userID: DemoSeedUserID.miaPatel)
+        addPerson(app, role: "reviewers", userID: DemoSeedUserID.sofiaGarcia)
+        addPerson(app, role: "watchers", userID: DemoSeedUserID.sofiaGarcia)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+        XCTAssertEqual(detailElement(app, id: "task.assignee").label, "Mia Patel")
 
         goBack(app)
         openTask(app, id: DemoSeedTaskID.duplicatePushFix)
 
-        XCTAssertTrue(app.staticTexts["task.title"].exists)
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+        XCTAssertTrue(detailElement(app, id: "task.title").exists)
+        XCTAssertEqual(detailElement(app, id: "task.assignee").label, "Mia Patel")
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"], in: app))
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["task.reviewer.\(DemoSeedUserID.sofiaGarcia)"], in: app))
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"], in: app))
         XCTAssertTrue(findAfterScrolling(app.staticTexts["task.watcher.\(DemoSeedUserID.sofiaGarcia)"], in: app))
-        XCTAssertFalse(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"].exists)
-        XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
     }
 
     @MainActor
@@ -202,8 +194,8 @@ final class DemoUITests: XCTestCase {
             taskID: DemoSeedTaskID.incidentPlaybook
         )
 
-        XCTAssertTrue(app.staticTexts["task.assignee"].exists)
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
+        XCTAssertTrue(detailElement(app, id: "task.assignee").exists)
+        XCTAssertEqual(detailElement(app, id: "task.assignee").label, "Unassigned")
 
         openEditTaskForm(app)
         app.buttons["task-form.summary.assignee"].tap()
@@ -211,13 +203,13 @@ final class DemoUITests: XCTestCase {
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+        XCTAssertEqual(detailElement(app, id: "task.assignee").label, "Mia Patel")
 
         goBack(app)
         openTask(app, id: DemoSeedTaskID.incidentPlaybook)
 
-        XCTAssertTrue(app.staticTexts["task.title"].exists)
-        XCTAssertEqual(app.staticTexts["task.assignee"].label, "Mia Patel")
+        XCTAssertTrue(detailElement(app, id: "task.title").exists)
+        XCTAssertEqual(detailElement(app, id: "task.assignee").label, "Mia Patel")
     }
 
     @MainActor
@@ -279,7 +271,7 @@ final class DemoUITests: XCTestCase {
         goBack(app)
         openTask(app, id: DemoSeedTaskID.duplicatePushFix)
 
-        XCTAssertTrue(app.staticTexts["task.title"].exists)
+        XCTAssertTrue(detailElement(app, id: "task.title").exists)
         XCTAssertFalse(app.staticTexts["task.reviewer.\(DemoSeedUserID.noahKim)"].exists)
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.liamBrown)"].exists)
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
@@ -373,7 +365,11 @@ private extension DemoUITests {
     func openTaskDetail(_ app: XCUIApplication, projectID: String, taskID: String) {
         openProject(app, id: projectID)
         openTask(app, id: taskID)
-        XCTAssertTrue(app.staticTexts["task.title"].exists)
+        XCTAssertTrue(detailElement(app, id: "task.title").exists)
+    }
+
+    func detailElement(_ app: XCUIApplication, id: String) -> XCUIElement {
+        app.descendants(matching: .any)[id]
     }
 
     func goBack(_ app: XCUIApplication) {
@@ -390,21 +386,14 @@ private extension DemoUITests {
         XCTAssertTrue(app.buttons["task-form.save"].exists)
     }
 
-    func openPeoplePicker(_ app: XCUIApplication, route: String) {
-        let triggerID: String
-        switch route {
-        case "reviewers", "watchers":
-            triggerID = "task-form.\(route).add"
-        default:
-            triggerID = "task-form.summary.\(route)"
-        }
-        tapAfterScrolling(app.buttons[triggerID], in: app)
-        switch route {
-        case "reviewers", "watchers":
-            return
-        default:
-            XCTAssertTrue(app.buttons["task-form.picker.\(route).done"].waitForExistence(timeout: 1))
-        }
+    func selectAssignee(_ app: XCUIApplication, userID: String) {
+        tapAfterScrolling(app.buttons["task-form.summary.assignee"], in: app)
+        tapAfterScrolling(app.buttons["task-form.assignee.option.\(userID)"], in: app)
+    }
+
+    func addPerson(_ app: XCUIApplication, role: String, userID: String) {
+        tapAfterScrolling(app.buttons["task-form.\(role).add"], in: app)
+        tapAfterScrolling(app.buttons["task-form.\(role).option.\(userID)"], in: app)
     }
 
     func deleteTaskFromProject(_ app: XCUIApplication, id: String) {
@@ -468,7 +457,15 @@ private extension DemoUITests {
         XCTAssertTrue(element.exists)
         element.tap()
 
-        if let currentValue = element.value as? String, !currentValue.isEmpty {
+        element.press(forDuration: 1.0)
+
+        let selectAllMenuItem = app.menuItems["Select All"]
+        let selectAllButton = app.buttons["Select All"]
+        if selectAllMenuItem.waitForExistence(timeout: 0.5) {
+            selectAllMenuItem.tap()
+        } else if selectAllButton.waitForExistence(timeout: 0.5) {
+            selectAllButton.tap()
+        } else if let currentValue = element.value as? String, !currentValue.isEmpty {
             let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)
             element.typeText(deleteString)
         }

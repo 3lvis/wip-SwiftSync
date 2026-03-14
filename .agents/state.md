@@ -17,10 +17,18 @@
 - [x] Rework task form reviewer and watcher add flows into single-add SwiftUI pickers with per-row removal
 - [x] Update demo UI tests to match the add-one reviewer and watcher picker flow
 - [x] Rebuild the demo app and record the latest state
+- [x] Rewrite stale task people UI-test coverage to match add-one menu pickers and persisted detail assertions
+- [x] Rebuild the demo app and record the latest state
+- [~] Fix task detail UI tests to query chip identifiers without assuming `StaticText`
+- [~] Run focused UI verification with `build-for-testing` and `test-without-building`
+- [x] Add a project playbook for running tests with the fastest repeatable local loop
+- [x] Capture UI-test loop hardening work in a planning doc before implementing it
+- [x] Implement the first proven UI-test loop hardening steps: explicit simulator target, shared derived data, and scripted execution
+- [x] Rebuild the demo app and record the latest state
 
 ## Last known state
 
-`xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed after switching reviewer and watcher add flows to menu-style SwiftUI pickers
+Focused UI loop is stabilized enough to expose real test failures: `testProjectAndTaskDetailShowSeededContent` passed through the scripted loop, `testUpdateTaskTitleKeepsProjectAndDetailInSync` failed on a real text-replacement bug and then passed after the helper fix, and `xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` now passes
 
 ## Decisions (don't revisit)
 
@@ -30,6 +38,9 @@
 - The demo seed fallback currently makes `authorID` match `assigneeID` when author is omitted, so differing roles require explicit seed authors
 - User `role` is demo metadata only; it is not part of the current task UI contract
 - Reviewer and watcher adding now uses one-at-a-time menu-style `Picker` selection from the remaining available users; removal stays on the form rows
+- Task detail person chips should be asserted by accessibility identifier across any element type because XCTest surfaces them inconsistently
+- UI test destination names must match installed simulators on the current machine; `iPhone 16` is not available here
+- Focused UI runs should disable parallel testing locally to avoid Xcode clone devices obscuring runner-launch failures
 
 ## Files touched
 
@@ -41,3 +52,6 @@
 - DemoCore/Sources/DemoCore/Models/DemoModels.swift
 - Demo/DemoUITests/DemoUITests.swift
 - docs/planning/task-form-people-scaling.md
+- docs/project/test-running-playbook.md
+- docs/planning/ui-test-loop-hardening.md
+- scripts/run_ui_test.sh
