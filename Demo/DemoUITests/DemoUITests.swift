@@ -135,9 +135,9 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        scrollToVisible(app.textFields["task-form.items.new-title"], in: app)
-        replaceText(in: app.textFields["task-form.items.new-title"], with: addedItemTitle, app: app)
         app.buttons["task-form.items.add"].tap()
+        scrollToVisible(app.textFields["task-form.items.2.title"], in: app)
+        replaceText(in: app.textFields["task-form.items.2.title"], with: addedItemTitle, app: app)
 
         scrollToVisible(app.textFields["task-form.items.0.title"], in: app)
         replaceText(in: app.textFields["task-form.items.0.title"], with: renamedItemTitle, app: app)
@@ -164,19 +164,18 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        openPeoplePicker(app, route: "assignee")
-        tapAfterScrolling(app.buttons["task-form.picker.assignee.row.\(DemoSeedUserID.miaPatel)"], in: app)
-        app.buttons["task-form.picker.assignee.done"].tap()
+        app.buttons["task-form.summary.assignee"].tap()
+        tapAfterScrolling(app.buttons["task-form.assignee.option.\(DemoSeedUserID.miaPatel)"], in: app)
 
         openPeoplePicker(app, route: "reviewers")
-        tapAfterScrolling(app.buttons["task-form.picker.reviewers.row.\(DemoSeedUserID.noahKim)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.picker.reviewers.row.\(DemoSeedUserID.sofiaGarcia)"], in: app)
-        app.buttons["task-form.picker.reviewers.done"].tap()
+        tapAfterScrolling(app.buttons["task-form.reviewers.option.\(DemoSeedUserID.noahKim)"], in: app)
+        openPeoplePicker(app, route: "reviewers")
+        tapAfterScrolling(app.buttons["task-form.reviewers.option.\(DemoSeedUserID.sofiaGarcia)"], in: app)
 
         openPeoplePicker(app, route: "watchers")
-        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.ethanLee)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.sofiaGarcia)"], in: app)
-        app.buttons["task-form.picker.watchers.done"].tap()
+        tapAfterScrolling(app.buttons["task-form.watchers.option.\(DemoSeedUserID.ethanLee)"], in: app)
+        openPeoplePicker(app, route: "watchers")
+        tapAfterScrolling(app.buttons["task-form.watchers.option.\(DemoSeedUserID.sofiaGarcia)"], in: app)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -207,9 +206,8 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["task.assignee"].label, "Unassigned")
 
         openEditTaskForm(app)
-        openPeoplePicker(app, route: "assignee")
-        tapAfterScrolling(app.buttons["task-form.picker.assignee.row.\(DemoSeedUserID.miaPatel)"], in: app)
-        app.buttons["task-form.picker.assignee.done"].tap()
+        app.buttons["task-form.summary.assignee"].tap()
+        tapAfterScrolling(app.buttons["task-form.assignee.option.\(DemoSeedUserID.miaPatel)"], in: app)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -271,14 +269,9 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        openPeoplePicker(app, route: "reviewers")
-        tapAfterScrolling(app.buttons["task-form.picker.reviewers.row.\(DemoSeedUserID.noahKim)"], in: app)
-        app.buttons["task-form.picker.reviewers.done"].tap()
-
-        openPeoplePicker(app, route: "watchers")
-        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.liamBrown)"], in: app)
-        tapAfterScrolling(app.buttons["task-form.picker.watchers.row.\(DemoSeedUserID.ethanLee)"], in: app)
-        app.buttons["task-form.picker.watchers.done"].tap()
+        tapAfterScrolling(app.buttons["task-form.reviewers.delete.\(DemoSeedUserID.noahKim)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.watchers.delete.\(DemoSeedUserID.liamBrown)"], in: app)
+        tapAfterScrolling(app.buttons["task-form.watchers.delete.\(DemoSeedUserID.ethanLee)"], in: app)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -398,8 +391,20 @@ private extension DemoUITests {
     }
 
     func openPeoplePicker(_ app: XCUIApplication, route: String) {
-        tapAfterScrolling(app.buttons["task-form.summary.\(route)"], in: app)
-        XCTAssertTrue(app.buttons["task-form.picker.\(route).done"].waitForExistence(timeout: 1))
+        let triggerID: String
+        switch route {
+        case "reviewers", "watchers":
+            triggerID = "task-form.\(route).add"
+        default:
+            triggerID = "task-form.summary.\(route)"
+        }
+        tapAfterScrolling(app.buttons[triggerID], in: app)
+        switch route {
+        case "reviewers", "watchers":
+            return
+        default:
+            XCTAssertTrue(app.buttons["task-form.picker.\(route).done"].waitForExistence(timeout: 1))
+        }
     }
 
     func deleteTaskFromProject(_ app: XCUIApplication, id: String) {

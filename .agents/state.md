@@ -14,10 +14,13 @@
 - [x] Run relevant verification and record the latest state
 - [x] Rename screen machine types so they match the current view names
 - [x] Run relevant verification and record the latest state
+- [x] Rework task form reviewer and watcher add flows into single-add SwiftUI pickers with per-row removal
+- [x] Update demo UI tests to match the add-one reviewer and watcher picker flow
+- [x] Rebuild the demo app and record the latest state
 
 ## Last known state
 
-`swift test` passed; `xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed after renaming screen machines to match the views
+`xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passed after switching reviewer and watcher add flows to menu-style SwiftUI pickers
 
 ## Decisions (don't revisit)
 
@@ -26,6 +29,7 @@
 - Remove the completed planning file instead of leaving stale unchecked items in `docs/planning`
 - The demo seed fallback currently makes `authorID` match `assigneeID` when author is omitted, so differing roles require explicit seed authors
 - User `role` is demo metadata only; it is not part of the current task UI contract
+- Reviewer and watcher adding now uses one-at-a-time menu-style `Picker` selection from the remaining available users; removal stays on the form rows
 
 ## Files touched
 
