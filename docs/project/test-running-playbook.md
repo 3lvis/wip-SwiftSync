@@ -1,20 +1,13 @@
 # Test-Running Playbook
 
-This document defines the default way to run tests in this repo.
-
-The goal is:
-
-- get the fastest reliable signal for the layer being changed
-- avoid full Xcode rebuilds between targeted UI test runs
-- keep test execution predictable across agents and local development
+This document defines the standard way to run tests in this repo.
 
 ## Rules
 
 - Run commands sequentially.
-- Use the narrowest test surface that can prove the change.
 - For library and backend work, start with `swift test`.
 - For `Demo/Demo/**` changes, build the demo app before finishing.
-- For UI-test debugging, build once, then rerun one UI test at a time without rebuilding.
+- For UI-test debugging, use the local loop script and run one UI test at a time.
 
 ## Default commands by change type
 
@@ -26,11 +19,11 @@ Use:
 swift test
 ```
 
-This is the default for changes in:
+Run this for changes in:
 
 - `SwiftSync/**`
 - `DemoBackend/**`
-- `DemoCore/**` when an Xcode-only surface is not involved
+- `DemoCore/**` when the change does not require an Xcode-only surface
 
 ### Demo app UI or behavior changes
 
@@ -45,35 +38,33 @@ xcodebuild build \
   CODE_SIGN_IDENTITY=''
 ```
 
-This is required for changes in:
+Run this for changes in:
 
 - `Demo/Demo/**`
 - `Demo/DemoUITests/**`
 
 ## UI test debugging loop
 
-Do not run full `xcodebuild test` repeatedly when fixing one UI test.
+Do not run full `xcodebuild test` repeatedly when fixing UI tests.
 
-Use this loop:
-
-1. Build the UI tests once.
-2. Run one failing UI test with `test-without-building`.
-3. Read the failure.
-4. Fix the product code or the test.
-5. Re-run the same UI test.
-6. Move to the next failing UI test only after the current one passes.
-
-For this repo, run focused UI tests through:
+Run focused UI tests through:
 
 ```bash
 ./scripts/run_ui_test.sh DemoUITests/DemoUITests/testProjectAndTaskDetailShowSeededContent
 ```
 
-That script is the default local loop because it pins the simulator, reuses derived data, disables parallel testing, and performs simulator preflight before each targeted run.
+This script is the standard local UI-test loop. It:
 
-### Step 1: Build once for testing
+- pins one installed simulator UDID
+- boots the simulator and waits for boot completion
+- uses one shared derived-data path
+- disables parallel testing
+- reuses `build-for-testing` products across targeted runs
+- retries once after reboot if the runner fails to launch
 
-Run:
+## Underlying commands
+
+### Build for testing
 
 ```bash
 xcodebuild build-for-testing \
@@ -86,9 +77,7 @@ xcodebuild build-for-testing \
   CODE_SIGN_IDENTITY=''
 ```
 
-### Step 2: Run one UI test without rebuilding
-
-Run:
+### Run one UI test without rebuilding
 
 ```bash
 xcodebuild test-without-building \
@@ -102,27 +91,7 @@ xcodebuild test-without-building \
   CODE_SIGN_IDENTITY=''
 ```
 
-Replace the final test identifier with the exact failing test you are working on.
-
-### Step 3: Continue one by one
-
-After the first test is fixed, run the next failing test with the same `test-without-building` command shape.
-
-Do not return to `build-for-testing` unless:
-
-- source changes invalidate the current build products
-- Xcode reports the test bundle is missing or stale
-- the simulator destination changes
-
-If the test code changed, force a rebuild before the next targeted run.
-
-## When a single test needs app data isolation
-
-UI tests in this repo already isolate runs with launch environment values.
-
-Keep using the test’s existing app bootstrap path.
-
-Do not add a new Xcode test plan just to run one UI test at a time.
+Replace the final test identifier with the exact failing test name.
 
 ## Simulator preflight
 
@@ -135,19 +104,17 @@ xcrun simctl boot <installed-simulator-udid> || true
 xcrun simctl bootstatus <installed-simulator-udid> -b
 ```
 
-Do not rely on device names alone. Use an installed simulator UDID so reruns stay on the same device.
+Do not use device names. Use an installed simulator UDID so reruns stay on the same device.
 
 ## Parallel testing
 
-For focused UI test debugging in this repo, disable parallel testing.
+Disable parallel testing for focused UI runs.
 
 Use:
 
 ```bash
 -parallel-testing-enabled NO
 ```
-
-This avoids Xcode cloning simulators for a single targeted UI test, which made runner-launch failures harder to reason about locally.
 
 ## Derived data reuse
 
@@ -157,7 +124,7 @@ Use one explicit derived-data path for the focused UI-test loop:
 -derivedDataPath .build/xcode-ui-tests
 ```
 
-Keep `build-for-testing` and `test-without-building` on the same path. This is what makes repeated targeted runs reuse the built test bundle instead of rebuilding it.
+Keep `build-for-testing` and `test-without-building` on the same path.
 
 ## Wait policy
 
@@ -167,14 +134,15 @@ Use the smallest wait that proves the contract.
 - Increase only when the failing surface is genuinely asynchronous.
 - Do not add broad sleeps to hide selector or accessibility bugs.
 
-Prefer:
+Use:
 
 - `waitForExistence(timeout:)`
 - `waitForNonExistence(timeout:)`
 
-Avoid:
+Do not use:
 
 - arbitrary long waits
+- sleeps
 - retry loops that hide deterministic failures
 
 ## Assertion policy for UI tests
@@ -187,7 +155,7 @@ Assert the most stable user-meaningful surface.
 
 ## Standard execution order
 
-When fixing a UI bug or broken UI test:
+When fixing a UI bug or broken UI test, use this order:
 
 1. Pick one installed simulator UDID and keep using it for the whole session.
 2. Boot that simulator and wait for boot completion.
@@ -195,7 +163,7 @@ When fixing a UI bug or broken UI test:
 4. Run one failing UI test with `test-without-building` on the same simulator UDID and derived-data path.
 5. Fix the bug.
 6. Re-run that same UI test with `test-without-building`.
-7. Run the next failing UI test with `test-without-building` and no rebuild if the built products are still valid.
+7. Run the next failing UI test with `test-without-building`.
 8. If the runner fails to launch, retry the same targeted run once after rebooting the simulator.
 9. After the focused fixes are done, run the required demo build:
 
@@ -208,4 +176,4 @@ xcodebuild build \
   CODE_SIGN_IDENTITY=''
 ```
 
-This is the default playbook. Follow it unless a task explicitly requires a different test surface.
+Follow this playbook by default.

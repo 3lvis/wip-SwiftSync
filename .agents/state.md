@@ -19,8 +19,8 @@
 - [x] Rebuild the demo app and record the latest state
 - [x] Rewrite stale task people UI-test coverage to match add-one menu pickers and persisted detail assertions
 - [x] Rebuild the demo app and record the latest state
-- [~] Fix task detail UI tests to query chip identifiers without assuming `StaticText`
-- [~] Run focused UI verification with `build-for-testing` and `test-without-building`
+- [x] Fix task detail UI tests to query chip identifiers without assuming `StaticText`
+- [x] Run focused UI verification with `build-for-testing` and `test-without-building`
 - [x] Add a project playbook for running tests with the fastest repeatable local loop
 - [x] Capture UI-test loop hardening work in a planning doc before implementing it
 - [x] Implement the first proven UI-test loop hardening steps: explicit simulator target, shared derived data, and scripted execution
@@ -28,7 +28,7 @@
 
 ## Last known state
 
-Focused UI loop is stabilized enough to expose real test failures: `testProjectAndTaskDetailShowSeededContent` passed through the scripted loop, `testUpdateTaskTitleKeepsProjectAndDetailInSync` failed on a real text-replacement bug and then passed after the helper fix, and `xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` now passes
+All current `DemoUITests` methods were run one by one through `scripts/run_ui_test.sh`; the last remaining failure was `testClearTaskReviewersOrWatchers`, which passed after making existing reviewer/watcher delete controls visible to the isolated edit draft and to XCTest. `xcodebuild build -workspace SwiftSync.xcworkspace -scheme Demo -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=''` passes.
 
 ## Decisions (don't revisit)
 
@@ -41,6 +41,7 @@ Focused UI loop is stabilized enough to expose real test failures: `testProjectA
 - Task detail person chips should be asserted by accessibility identifier across any element type because XCTest surfaces them inconsistently
 - UI test destination names must match installed simulators on the current machine; `iPhone 16` is not available here
 - Focused UI runs should disable parallel testing locally to avoid Xcode clone devices obscuring runner-launch failures
+- Existing reviewer and watcher relationships must be copied onto the isolated edit draft or the edit form can open without delete rows for already-selected people
 
 ## Files touched
 
@@ -53,5 +54,5 @@ Focused UI loop is stabilized enough to expose real test failures: `testProjectA
 - Demo/DemoUITests/DemoUITests.swift
 - docs/planning/task-form-people-scaling.md
 - docs/project/test-running-playbook.md
-- docs/planning/ui-test-loop-hardening.md
+- docs/planning/task-form-edit-relationship-hydration.md
 - scripts/run_ui_test.sh
