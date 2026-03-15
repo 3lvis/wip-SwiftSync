@@ -188,6 +188,15 @@ extension TaskFormSheet {
         )
     }
 
+    func descriptionBinding() -> Binding<String> {
+        Binding(
+            get: { draft.descriptionText ?? "" },
+            set: { newValue in
+                draft.descriptionText = newValue
+            }
+        )
+    }
+
     func users(matching selectedIDs: Set<String>) -> [User] {
         machine.users.filter { selectedIDs.contains($0.id) }
     }
@@ -258,8 +267,8 @@ extension TaskFormSheet {
     var overviewSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                TextEditor(text: $draft.title)
-                    .frame(minHeight: 72)
+                TextField("Task title", text: $draft.title, axis: .vertical)
+                    .lineLimit(2...4)
                     .font(.title3.weight(.semibold))
                     .accessibilityIdentifier("task-form.title")
 
@@ -275,8 +284,19 @@ extension TaskFormSheet {
 
     var descriptionSection: some View {
         Section("Description") {
-            TextField("Why this task matters", text: $draft.descriptionText)
-                .accessibilityIdentifier("task-form.description")
+            ZStack(alignment: .topLeading) {
+                if (draft.descriptionText ?? "").isEmpty {
+                    Text("Why this task matters")
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+
+                TextEditor(text: descriptionBinding())
+                    .frame(minHeight: 120)
+                    .accessibilityIdentifier("task-form.description")
+            }
         }
     }
 

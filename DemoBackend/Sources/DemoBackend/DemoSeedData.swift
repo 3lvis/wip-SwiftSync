@@ -36,7 +36,7 @@ public struct DemoSeedData {
         public let reviewerIDs: [String]
         public let authorID: String
         public let title: String
-        public let descriptionText: String
+        public let descriptionText: String?
         public let state: String
         public let watcherIDs: [String]
         public let createdAt: Date
@@ -49,7 +49,7 @@ public struct DemoSeedData {
             reviewerIDs: [String] = [],
             authorID: String? = nil,
             title: String,
-            descriptionText: String,
+            descriptionText: String?,
             state: String,
             watcherIDs: [String] = [],
             createdAt: Date,

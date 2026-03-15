@@ -105,7 +105,7 @@ public final class FakeDemoAPIClient {
         return try backend.getTaskStateOptionsPayload().map(Self.makePayload)
     }
 
-    public func patchTaskDescription(taskID: String, descriptionText: String) async throws -> DemoSyncPayload? {
+    public func patchTaskDescription(taskID: String, descriptionText: String?) async throws -> DemoSyncPayload? {
         try await networkGate(endpoint: "PATCH /tasks/{id}/description")
         guard let payload = try backend.patchTaskDescription(taskID: taskID, descriptionText: descriptionText) else { return nil }
         return try Self.makePayload(payload)

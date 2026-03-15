@@ -119,12 +119,10 @@ extension TaskView {
                         .font(.title2)
                         .fontWeight(.bold)
                         .accessibilityIdentifier("task.title")
-                    if !taskModel.descriptionText.isEmpty {
-                        Text(taskModel.descriptionText)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .accessibilityIdentifier("task.description")
-                    }
+                    Text((taskModel.descriptionText?.isEmpty == false) ? (taskModel.descriptionText ?? "") : "No description yet.")
+                        .font(.body)
+                        .foregroundStyle((taskModel.descriptionText?.isEmpty == false) ? .primary : .secondary)
+                        .accessibilityIdentifier("task.description")
                     HStack(spacing: 6) {
                         Text(taskModel.stateLabel)
                             .font(.caption)
