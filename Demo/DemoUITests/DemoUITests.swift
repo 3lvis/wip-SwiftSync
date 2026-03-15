@@ -102,6 +102,9 @@ final class DemoUITests: XCTestCase {
     func testCreateTaskInsideProject() throws {
         let app = configuredApp()
         let createdTitle = uniqueTitle(prefix: "UI Created Task")
+        let authorID = DemoSeedUserID.miaPatel
+        let reviewerID = DemoSeedUserID.sofiaGarcia
+        let watcherID = DemoSeedUserID.ethanLee
 
         app.launch()
         openProject(app, id: DemoSeedProjectID.accountSecurity)
@@ -112,14 +115,19 @@ final class DemoUITests: XCTestCase {
         XCTAssertFalse(saveButton.isEnabled)
 
         replaceText(in: app.textViews["task-form.title"], with: createdTitle, app: app)
+        selectAuthor(app, userID: authorID)
+        addPerson(app, role: "reviewers", userID: reviewerID)
+        addPerson(app, role: "watchers", userID: watcherID)
         XCTAssertTrue(saveButton.isEnabled)
         saveButton.tap()
 
-        XCTAssertTrue(app.staticTexts[createdTitle].exists)
-        app.staticTexts[createdTitle].tap()
+        openTopProjectTask(app)
 
         XCTAssertTrue(detailElement(app, id: "task.title").exists)
         XCTAssertEqual(detailElement(app, id: "task.title").label, createdTitle)
+        XCTAssertEqual(detailElement(app, id: "task.author").label, "Mia Patel")
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["task.reviewer.\(reviewerID)"], in: app))
+        XCTAssertTrue(findAfterScrolling(app.staticTexts["task.watcher.\(watcherID)"], in: app))
     }
 
     @MainActor
@@ -152,6 +160,33 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(findAfterScrolling(app.staticTexts[renamedItemTitle], in: app))
         XCTAssertTrue(findAfterScrolling(app.staticTexts[addedItemTitle], in: app))
         XCTAssertFalse(app.staticTexts[deletedItemTitle].exists)
+    }
+
+    @MainActor
+    func testReorderTaskItemsPersistsAcrossReread() throws {
+        let app = configuredApp()
+        let firstItemTitle = "Gather requirements"
+        let secondItemTitle = "Draft implementation plan"
+
+        app.launch()
+        openTaskDetail(
+            app,
+            projectID: DemoSeedProjectID.accountSecurity,
+            taskID: DemoSeedTaskID.sessionTimeout
+        )
+
+        assertElement(withLabel: firstItemTitle, appearsBeforeElementWithLabel: secondItemTitle, in: app)
+
+        openEditTaskForm(app)
+        tapAfterScrolling(app.buttons["task-form.items.swap-first-two"], in: app)
+        app.buttons["task-form.save"].tap()
+
+        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
+        assertElement(withLabel: secondItemTitle, appearsBeforeElementWithLabel: firstItemTitle, in: app)
+
+        goBack(app)
+        openTask(app, id: DemoSeedTaskID.sessionTimeout)
+        assertElement(withLabel: secondItemTitle, appearsBeforeElementWithLabel: firstItemTitle, in: app)
     }
 
     @MainActor
@@ -386,6 +421,14 @@ private extension DemoUITests {
         XCTAssertTrue(detailElement(app, id: "task.title").exists)
     }
 
+    func openTopProjectTask(_ app: XCUIApplication) {
+        let rows = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'project.task.'"))
+        let row = rows.element(boundBy: 0)
+        XCTAssertTrue(row.waitForExistence(timeout: 1))
+        row.tap()
+    }
+
     func detailElement(_ app: XCUIApplication, id: String) -> XCUIElement {
         app.descendants(matching: .any)[id]
     }
@@ -407,6 +450,11 @@ private extension DemoUITests {
     func selectAssignee(_ app: XCUIApplication, userID: String) {
         tapAfterScrolling(app.buttons["task-form.summary.assignee"], in: app)
         tapAfterScrolling(app.buttons["task-form.assignee.option.\(userID)"], in: app)
+    }
+
+    func selectAuthor(_ app: XCUIApplication, userID: String) {
+        tapAfterScrolling(app.buttons["task-form.summary.author"], in: app)
+        tapAfterScrolling(app.buttons["task-form.author.option.\(userID)"], in: app)
     }
 
     func addPerson(_ app: XCUIApplication, role: String, userID: String) {
@@ -469,6 +517,14 @@ private extension DemoUITests {
             }
         }
         return element.exists
+    }
+
+    func assertElement(withLabel firstLabel: String, appearsBeforeElementWithLabel secondLabel: String, in app: XCUIApplication) {
+        let first = app.staticTexts[firstLabel]
+        let second = app.staticTexts[secondLabel]
+        XCTAssertTrue(findAfterScrolling(first, in: app))
+        XCTAssertTrue(findAfterScrolling(second, in: app))
+        XCTAssertLessThan(first.frame.minY, second.frame.minY)
     }
 
     func replaceText(in element: XCUIElement, with text: String, app: XCUIApplication) {
