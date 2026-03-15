@@ -1,6 +1,6 @@
 # SwiftSync
 
-SwiftSync makes syncing JSON with SwiftData feel obvious.
+SwiftSync is a sync layer for SwiftData apps with JSON backends.
 
 You define models once, then use one API to:
 - sync server payloads into local SwiftData
@@ -8,17 +8,169 @@ You define models once, then use one API to:
 
 It follows convention over configuration and keeps behavior deterministic.
 
+The promise is simple:
+- your app reads from local SwiftData
+- your backend speaks normal JSON
+- SwiftSync handles the repetitive glue in between
+
+SwiftSync is for teams already building on SwiftData who want:
+- deterministic JSON -> local store sync
+- export back into API-ready payloads
+- reactive local reads for SwiftUI and UIKit
+- explicit, testable backend semantics around missing vs `null`
+
+## What SwiftSync Is
+
+SwiftSync is not a backend, a database replacement, or an opinionated app architecture.
+
+It is the missing sync layer between:
+- a SwiftData model graph in your app
+- a conventional JSON API on your backend
+
+If your current pain is:
+- repetitive mapping code
+- fragile relationship updates
+- unclear `null` vs missing semantics
+- re-fetch/rebind boilerplate after mutations
+
+that is exactly the problem SwiftSync is built to solve.
+
+## Best Fit
+
+SwiftSync is a strong fit when:
+- you already want SwiftData to remain your local source of truth
+- your backend returns normal resource payloads and relationship IDs
+- you want explicit behavior around create, update, clear, and delete
+- you want SwiftUI or UIKit screens to react to local data instead of mutation callbacks
+
+## Not The Goal
+
+SwiftSync is not trying to:
+- replace SwiftData
+- impose a server product or hosted platform
+- hide backend contract details behind magic
+- treat omission and `null` as the same thing
+
+The design goal is boring, reliable sync behavior that fits naturally into an iOS app you already own.
+
 ## Install
 
-Add the package to your project and import:
+Requirements:
+- Xcode 17+
+- Swift 6.2
+- iOS 17+ / macOS 14+
+
+Add the package in Xcode:
+
+1. `File` -> `Add Package Dependencies...`
+2. Use this URL:
+
+```text
+https://github.com/3lvis/SwiftSync.git
+```
+
+3. Add the `SwiftSync` library product to your app target.
+
+If you use `Package.swift` directly:
+
+```swift
+.package(url: "https://github.com/3lvis/SwiftSync.git", from: "1.0.0")
+```
+
+Then import:
 
 ```swift
 import SwiftSync
 ```
 
+## Quick Start
+
+This is the shortest end-to-end path from model to live UI.
+
+### 1. Define a syncable model
+
+```swift
+import SwiftData
+import SwiftSync
+
+@Syncable
+@Model
+final class User {
+  @Attribute(.unique) var id: Int
+  var name: String
+  var createdAt: Date?
+
+  init(id: Int, name: String, createdAt: Date? = nil) {
+    self.id = id
+    self.name = name
+    self.createdAt = createdAt
+  }
+}
+```
+
+### 2. Create a `SyncContainer`
+
+```swift
+@MainActor
+func makeSyncContainer() throws -> SyncContainer {
+  try SyncContainer(
+    for: User.self,
+    keyStyle: .snakeCase
+  )
+}
+```
+
+### 3. Sync server JSON into SwiftData
+
+```swift
+let payload: [[String: Any]] = [
+  [
+    "id": 6,
+    "name": "Shawn Merrill",
+    "created_at": "2014-02-14T04:30:10+00:00"
+  ]
+]
+
+try await syncContainer.sync(payload: payload, as: User.self)
+```
+
+### 4. Read it reactively in SwiftUI
+
+```swift
+import SwiftUI
+import SwiftSync
+
+struct UsersScreen: View {
+  let syncContainer: SyncContainer
+
+  @SyncQuery(
+    User.self,
+    in: syncContainer,
+    sortBy: [SortDescriptor(\User.name)]
+  )
+  private var users: [User]
+
+  var body: some View {
+    List(users) { user in
+      Text(user.name)
+    }
+  }
+}
+```
+
+### 5. Export local state back to JSON
+
+```swift
+let rows = try syncContainer.export(as: User.self)
+```
+
+If this flow fits your app, the rest of the README covers relationship shapes, parent scope, reactive reads, and backend contract details.
+
 ## Table of Contents
 
 - [Why SwiftSync](#why-swiftsync)
+- [Install](#install)
+- [Quick Start](#quick-start)
 - [Property Mapping](#property-mapping)
 - [Basic Example](#basic-example)
 - [Reactive Reads](#reactive-reads)
@@ -29,6 +181,7 @@ import SwiftSync
 - [FAQ](docs/project/faq.md)
 - [Backend Contract](docs/project/backend-contract.md)
 - [API Reference](#api-reference)
+- [License](#license)
 
 ## Why SwiftSync
 
@@ -39,6 +192,18 @@ Syncing JSON into a local store is repetitive:
 - avoid unnecessary writes
 
 SwiftSync handles that core flow so app code can stay focused on domain behavior.
+
+It is a strong fit when:
+- your app already uses SwiftData
+- your backend can follow stable `id`, `*_id`, and `*_ids` conventions
+- you want strict missing-vs-`null` semantics instead of implicit magic
+- you want the UI to read from local state while mutations sync through a service/domain layer
+
+In practice, that means:
+- less model-mapping boilerplate
+- fewer relationship edge-case bugs
+- one consistent import/export contract
+- a UI that can stay local-first and reactive
 
 ## Property Mapping
 
@@ -743,3 +908,7 @@ public struct SyncRelationshipOperations: OptionSet, Sendable {
   public static let all: SyncRelationshipOperations
 }
 ```
+
+## License
+
+SwiftSync is released under the [MIT License](LICENSE).

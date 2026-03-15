@@ -1,6 +1,14 @@
 # Property Mapping Contract
 
-This document is the source of truth for property mapping behavior in SwiftSync.
+Read this when you need to know exactly how SwiftSync interprets payload keys, `null`, relationships, and export keys.
+
+If you only need the practical rule set, start here:
+- convention-first mapping is the default
+- missing key means ignore
+- explicit `null` means clear
+- `@RemoteKey` and `@PrimaryKey(remote:)` override conventions
+
+This document is the source of truth for the detailed behavior behind those rules.
 
 ## Scope
 

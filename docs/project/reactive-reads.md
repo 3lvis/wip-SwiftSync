@@ -1,28 +1,60 @@
 # Reactive Reads
 
-SwiftUI is the primary integration path. UIKit is supported via `SyncQueryPublisher` for cases where SwiftUI is not available.
+Read this document when you want the UI side of SwiftSync to feel simple.
 
-This document explains both:
+Short version:
+- use `@SyncQuery` for reactive local lists
+- use `@SyncModel` for one reactive local row by ID
+- use `SyncQueryPublisher` / `SyncModelPublisher` when you are not in SwiftUI
+- keep the network and mutation logic outside the view; let the UI react to local store updates
 
-- the user-facing mental model for SwiftSync reactive reads
-- the design rationale/tradeoffs behind the current reactive read approach
+SwiftUI is the primary integration path. UIKit is supported via `SyncQueryPublisher` when SwiftUI is not available.
 
-## User-Facing Mental Model / Usage
+This doc explains:
+- what to use first
+- the common query shapes
+- how to structure save flows so the UI stays simple
+- the rationale behind the current reactive-read model
 
-## What `@SyncQuery` / `@SyncModel` are
+## What To Use
 
-They are reactive local read helpers.
+Pick the smallest tool that matches the screen:
+
+- `@SyncQuery`: a reactive local list
+- `@SyncModel`: one reactive local row by sync ID
+- `SyncQueryPublisher`: a non-SwiftUI reactive list
+- `SyncModelPublisher`: a non-SwiftUI reactive single-row read
+
+They do not call the network by themselves.
+
+## Quick Mental Model
+
+Think of SwiftSync reads like this:
+
+- sync writes data into the local store
+- the UI reads from the local store
+- reactive read helpers keep the UI fresh when relevant local data changes
+
+In practice, `@SyncQuery` means:
+- "Keep this list in sync with local storage, using this filter and sort order."
+
+## Common Query Shapes
+
+Use one of these three patterns first:
+
+1. `relationship:` + `relationshipID:`
+   For relationship-scoped screens, like tasks for a project.
+2. `predicate:`
+   For scalar-only filters or compound business filters.
+3. plain fetch with `sortBy:`
+   For screens that show all rows of a model type.
+
+## `@SyncQuery` / `@SyncModel`
 
 - `@SyncQuery` keeps an array updated with rows from the local `SyncContainer` that match a rule.
 - `@SyncModel` keeps one local model (looked up by sync ID) refreshed for UI use.
 
-They do not call the network by themselves.
-
 ## Mental Model
-
-Think of `@SyncQuery` as:
-
-- "Keep this list in sync with local storage, using this filter and sort order."
 
 Three common query shapes:
 
@@ -115,7 +147,7 @@ This is the "sync and forget" experience: sync updates local storage, and reacti
 
 ## App Best Practices (SwiftUI + SwiftData + SwiftSync)
 
-These are application-layer conventions that work well with the reactive read model.
+Use these rules if you want SwiftSync to stay predictable as screens get more complex.
 
 ## Views React, Domain Layer Persists
 
@@ -174,7 +206,7 @@ The key invariant is stable: views read local reactive state; the domain layer k
 
 ## UIKit / State Machines
 
-For non-SwiftUI consumers, SwiftSync exposes Observation-based publishers:
+If you are not using SwiftUI, use the Observation-based publishers instead of trying to recreate your own reactive bridge:
 
 - `SyncQueryPublisher` for lists via reactive `rows`
 - `SyncModelPublisher` for a single row via reactive `row`
@@ -222,14 +254,14 @@ final class TaskDetailMachine {
 }
 ```
 
-Screen-machine rule for synced detail screens:
+Recommended machine shape for synced detail screens:
 
 - let the screen machine own the reactive publishers and load/submission orchestration
 - expose live reads from those publishers through thin computed properties on the machine
 - keep lightweight display-specific derivations there when they are part of the screen contract, such as sorted reviewer or watcher names
 - do not retain a separate same-identity snapshot of the synced model inside the machine just to reshape it for the view
 
-Why:
+Why this shape works:
 
 - the machine boundary stays consistent with the rest of the app
 - the view can remain mostly declarative without taking on sync orchestration
