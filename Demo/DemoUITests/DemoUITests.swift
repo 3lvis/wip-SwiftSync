@@ -12,7 +12,7 @@ private enum DemoUITestPlan {
      Testing rule:
      - tests should map to user goals, not to screen checkpoints
      - navigation assertions only matter when they support a larger journey
-     - add scaffolding only when the next real journey needs it
+     - keep the suite intentionally small and stable; add coverage below the UI layer before growing this file further
 
      Implemented coverage:
      - bootstrap smoke: launch and confirm the canonical seeded project list loads
@@ -23,8 +23,9 @@ private enum DemoUITestPlan {
        3. open "Add session timeout controls to account settings"
        4. verify title, assignee, author, and seeded checklist items
 
-     Planned journeys live below as commented-out test stubs so the file itself
-     stays the active UI automation roadmap.
+     Scope:
+     - this suite is intentionally capped at core demo journeys
+     - future coverage should prefer lower-level tests unless a new end-to-end user journey justifies UI automation
      */
 }
 
@@ -160,33 +161,6 @@ final class DemoUITests: XCTestCase {
         XCTAssertTrue(findAfterScrolling(app.staticTexts[renamedItemTitle], in: app))
         XCTAssertTrue(findAfterScrolling(app.staticTexts[addedItemTitle], in: app))
         XCTAssertFalse(app.staticTexts[deletedItemTitle].exists)
-    }
-
-    @MainActor
-    func testReorderTaskItemsPersistsAcrossReread() throws {
-        let app = configuredApp()
-        let firstItemTitle = "Gather requirements"
-        let secondItemTitle = "Draft implementation plan"
-
-        app.launch()
-        openTaskDetail(
-            app,
-            projectID: DemoSeedProjectID.accountSecurity,
-            taskID: DemoSeedTaskID.sessionTimeout
-        )
-
-        assertElement(withLabel: firstItemTitle, appearsBeforeElementWithLabel: secondItemTitle, in: app)
-
-        openEditTaskForm(app)
-        tapAfterScrolling(app.buttons["task-form.items.swap-first-two"], in: app)
-        app.buttons["task-form.save"].tap()
-
-        XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
-        assertElement(withLabel: secondItemTitle, appearsBeforeElementWithLabel: firstItemTitle, in: app)
-
-        goBack(app)
-        openTask(app, id: DemoSeedTaskID.sessionTimeout)
-        assertElement(withLabel: secondItemTitle, appearsBeforeElementWithLabel: firstItemTitle, in: app)
     }
 
     @MainActor
@@ -336,58 +310,6 @@ final class DemoUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.liamBrown)"].exists)
         XCTAssertFalse(app.staticTexts["task.watcher.\(DemoSeedUserID.ethanLee)"].exists)
     }
-
-    // TODO: Failure journey: empty project list.
-    // Purpose:
-    // - prove the app communicates there is no work yet
-    // Harness:
-    // - launch with a UI-test-specific empty seed instead of the canonical seeded data
-    //
-    // @MainActor
-    // func testBrowseWorkWithEmptyProjectList() throws {}
-
-    // TODO: Failure journey: empty project tasks.
-    // Purpose:
-    // - prove a project with no tasks renders its scoped empty state clearly
-    // Harness:
-    // - add one seeded project with no tasks to the UI-test fixture
-    //
-    // @MainActor
-    // func testBrowseProjectWithNoTasks() throws {}
-
-    // TODO: Failure journey: task with no items.
-    // Purpose:
-    // - prove empty task-detail checklist state is rendered clearly
-    //
-    // @MainActor
-    // func testOpenTaskWithNoItems() throws {}
-
-    // TODO: Failure journey: save failure.
-    // Purpose:
-    // - prove failed writes leave the form open and show a clear error
-    // Harness:
-    // - inject a UI-test engine/API behavior that fails the next task mutation while preserving reads
-    //
-    // @MainActor
-    // func testEditTaskSaveFailure() throws {}
-
-    // TODO: Failure journey: delete failure.
-    // Purpose:
-    // - prove failed deletes keep the task visible and show a clear error
-    // Harness:
-    // - inject a UI-test engine/API behavior that fails task delete while preserving reads
-    //
-    // @MainActor
-    // func testDeleteTaskFailure() throws {}
-
-    // TODO: Failure journey: edit while offline.
-    // Purpose:
-    // - prove an edit attempted after switching the demo to Offline stays on the form and shows a clear error
-    // Harness:
-    // - either switch the in-app scenario picker to Offline after the initial load or launch directly into Offline for a dedicated failure path
-    //
-    // @MainActor
-    // func testEditTaskWhileOfflineShowsFailure() throws {}
 }
 
 private extension DemoUITests {
@@ -517,14 +439,6 @@ private extension DemoUITests {
             }
         }
         return element.exists
-    }
-
-    func assertElement(withLabel firstLabel: String, appearsBeforeElementWithLabel secondLabel: String, in app: XCUIApplication) {
-        let first = app.staticTexts[firstLabel]
-        let second = app.staticTexts[secondLabel]
-        XCTAssertTrue(findAfterScrolling(first, in: app))
-        XCTAssertTrue(findAfterScrolling(second, in: app))
-        XCTAssertLessThan(first.frame.minY, second.frame.minY)
     }
 
     func replaceText(in element: XCUIElement, with text: String, app: XCUIApplication) {

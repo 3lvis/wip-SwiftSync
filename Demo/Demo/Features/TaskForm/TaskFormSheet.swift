@@ -94,10 +94,6 @@ extension TaskFormSheet {
         machine.sortedItems(in: draft).map(\.id)
     }
 
-    private var isUITesting: Bool {
-        ProcessInfo.processInfo.environment["SWIFTSYNC_UI_TESTING"] == "1"
-    }
-
     @ToolbarContentBuilder
     var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
@@ -295,13 +291,6 @@ extension TaskFormSheet {
                     }
                 }
                 .accessibilityIdentifier("task-form.items.reorder-toggle")
-
-                if isUITesting {
-                    Button("Swap First Two Items") {
-                        _ = machine.mutateItems(.move(from: IndexSet(integer: 1), to: 0), in: draft)
-                    }
-                    .accessibilityIdentifier("task-form.items.swap-first-two")
-                }
             }
 
             if items.isEmpty {

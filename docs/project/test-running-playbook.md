@@ -43,6 +43,9 @@ Run this for changes in:
 - `Demo/Demo/**`
 - `Demo/DemoUITests/**`
 
+The Demo UI suite is intentionally capped at core end-to-end journeys.
+Prefer adding coverage in lower-level tests unless a new user-visible journey truly requires UI automation.
+
 ## UI test debugging loop
 
 Do not run full `xcodebuild test` repeatedly when fixing UI tests.
