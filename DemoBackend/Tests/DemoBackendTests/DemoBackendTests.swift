@@ -107,31 +107,6 @@ final class DemoBackendTests: XCTestCase {
         XCTAssertNotNil(UUID(uuidString: newID), "task id '\(newID)' is not a UUID")
     }
 
-    func testSQLiteBackendPatchTaskDescriptionPersistsAcrossReopen() async throws {
-        let url = makeTemporaryDatabaseURL()
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        let backend = try DemoServerSimulator(databaseURL: url, seedData: smallSeedData())
-
-        let before = try backend.getTaskDetailPayload(taskID: taskID)
-        let beforeUpdatedAt = before?["updated_at"] as? String
-        XCTAssertEqual(before?["description"] as? String, "Old description")
-
-        let patched = try backend.patchTaskDescription(
-            taskID: taskID,
-            descriptionText: "New description from server"
-        )
-
-        XCTAssertEqual(patched?["description"] as? String, "New description from server")
-        XCTAssertNotEqual(patched?["updated_at"] as? String, beforeUpdatedAt)
-        // created_at must not change on patch
-        XCTAssertEqual(patched?["created_at"] as? String, before?["created_at"] as? String)
-
-        let reopened = try DemoServerSimulator(databaseURL: url, seedData: smallSeedData())
-        let reopenedTask = try reopened.getTaskDetailPayload(taskID: taskID)
-        XCTAssertEqual(reopenedTask?["description"] as? String, "New description from server")
-    }
-
     func testSQLiteBackendPatchTaskStateAndAssigneeReviewerAndRelationships() async throws {
         let url = makeTemporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url) }

@@ -2,18 +2,17 @@
 
 ## Plan
 
-- [x] Convert `descriptionText` to optional and update tests to the nil/null contract first
-- [x] Update backend, model, export, and form logic to preserve nil through save and sync
-- [x] Update UI rendering and UI tests for optional description semantics
-- [x] Verify with targeted DemoBackend, DemoCore, UI, and Demo build checks
+- [x] Remove confirmed unused task-form helpers and unused description patch API path
+- [x] Run relevant tests and Demo build after the removals
 
 ## Last known state
 
-`descriptionText` is now optional end-to-end. Targeted DemoBackend null-create/null-clear tests, targeted DemoCore clear-to-nil test, `testUpdateTaskTitleKeepsProjectAndDetailInSync`, `testCreateTaskInsideProject`, and the Demo build all passed.
+Unused task-form helpers and the unused description patch API path were removed. `swift test --filter DemoBackendTests` in `DemoBackend`, `swift test --filter TaskFormDescriptionNormalizationTests` in `DemoCore`, and the Demo build all passed.
 
 ## Decisions (don't revisit)
 
 - Target contract is optional description: `nil`/`null` means cleared, and fallback copy stays presentation-only in the detail UI.
+- `patchTaskDescription` is not part of the active app flow; with no callers outside one backend test, remove it instead of preserving dead API surface.
 
 ## Files touched
 

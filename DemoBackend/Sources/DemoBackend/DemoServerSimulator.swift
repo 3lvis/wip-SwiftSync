@@ -160,28 +160,6 @@ public final class DemoServerSimulator {
     }
 
     @discardableResult
-    public func patchTaskDescription(taskID: String, descriptionText: String?) throws -> [String: Any]? {
-        guard let current = try getTaskDetailPayload(taskID: taskID) else { return nil }
-        suspendAmbientMutationsAfterWrite()
-        let currentUpdatedAt = try parseISO8601(current["updated_at"])
-        let next = nextTimestamp(after: currentUpdatedAt)
-
-        try self.sqlite.execute(
-            """
-            UPDATE tasks
-            SET description = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            bind: { stmt in
-                self.sqlite.bind(nullableText: descriptionText, at: 1, in: stmt)
-                self.sqlite.bind(double: next.timeIntervalSince1970, at: 2, in: stmt)
-                self.sqlite.bind(text: taskID, at: 3, in: stmt)
-            }
-        )
-        return try getTaskDetailPayload(taskID: taskID)
-    }
-
-    @discardableResult
     public func patchTaskState(taskID: String, state: String) throws -> [String: Any]? {
         _ = try validatedTaskState(state)
         guard let current = try getTaskDetailPayload(taskID: taskID) else { return nil }

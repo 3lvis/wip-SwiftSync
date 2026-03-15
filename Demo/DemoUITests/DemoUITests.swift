@@ -88,7 +88,7 @@ final class DemoUITests: XCTestCase {
         openEditTaskForm(app)
 
         replaceText(in: app.textFields["task-form.title"], with: updatedTitle, app: app)
-        replaceText(in: app.textViews["task-form.description"], with: "   ", app: app)
+        replaceText(in: app.textFields["task-form.description"], with: "   ", app: app)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))

@@ -201,11 +201,6 @@ extension TaskFormSheet {
         machine.users.filter { selectedIDs.contains($0.id) }
     }
 
-    func displayName(for userID: String?) -> String? {
-        guard let userID else { return nil }
-        return machine.users.first(where: { $0.id == userID })?.displayName
-    }
-
     fileprivate var availableReviewers: [User] {
         let selectedIDs = Set(draft.reviewers.map(\.id))
         return machine.users.filter { !selectedIDs.contains($0.id) }
@@ -232,22 +227,6 @@ extension TaskFormSheet {
         draft.watchers.append(user)
     }
 
-    func peopleSummary(for users: [User]) -> String {
-        let names = users
-            .map(\.displayName)
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-
-        switch names.count {
-        case 0:
-            return "None"
-        case 1:
-            return names[0]
-        case 2:
-            return names.joined(separator: ", ")
-        default:
-            return "\(names.count) selected"
-        }
-    }
 }
 
 private extension View {
@@ -284,19 +263,9 @@ extension TaskFormSheet {
 
     var descriptionSection: some View {
         Section("Description") {
-            ZStack(alignment: .topLeading) {
-                if (draft.descriptionText ?? "").isEmpty {
-                    Text("Why this task matters")
-                        .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 8)
-                        .allowsHitTesting(false)
-                }
-
-                TextEditor(text: descriptionBinding())
-                    .frame(minHeight: 120)
-                    .accessibilityIdentifier("task-form.description")
-            }
+            TextField("Why this task matters", text: descriptionBinding(), axis: .vertical)
+                .lineLimit(3...6)
+                .accessibilityIdentifier("task-form.description")
         }
     }
 
