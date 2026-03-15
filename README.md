@@ -2,6 +2,9 @@
 
 SwiftSync is a sync layer for SwiftData apps with JSON backends.
 
+It is the SwiftData-era successor to the old Core Data library `Sync`.
+If you are coming from legacy `Sync`, start with [Migrating From Sync](docs/project/migrating-from-sync.md).
+
 You define models once, then use one API to:
 - sync server payloads into local SwiftData
 - export local SwiftData back into API-ready JSON
@@ -171,6 +174,7 @@ If this flow fits your app, the rest of the README covers relationship shapes, p
 - [Why SwiftSync](#why-swiftsync)
 - [Install](#install)
 - [Quick Start](#quick-start)
+- [Migrating From Sync](docs/project/migrating-from-sync.md)
 - [Property Mapping](#property-mapping)
 - [Basic Example](#basic-example)
 - [Reactive Reads](#reactive-reads)
