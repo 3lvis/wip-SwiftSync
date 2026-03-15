@@ -346,8 +346,9 @@ public final class TaskFormSheetMachine {
         case .save(let mode, let draft, let onSuccess):
             applyDefaultsIfNeeded(to: draft)
             draft.title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if draft.descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                draft.descriptionText = "No description yet."
+            draft.descriptionText = draft.descriptionText?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if draft.descriptionText?.isEmpty == true {
+                draft.descriptionText = nil
             }
             normalizeItemPositions(in: draft)
             draft.updatedAt = Date()

@@ -160,28 +160,6 @@ public final class DemoServerSimulator {
     }
 
     @discardableResult
-    public func patchTaskDescription(taskID: String, descriptionText: String) throws -> [String: Any]? {
-        guard let current = try getTaskDetailPayload(taskID: taskID) else { return nil }
-        suspendAmbientMutationsAfterWrite()
-        let currentUpdatedAt = try parseISO8601(current["updated_at"])
-        let next = nextTimestamp(after: currentUpdatedAt)
-
-        try self.sqlite.execute(
-            """
-            UPDATE tasks
-            SET description = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            bind: { stmt in
-                self.sqlite.bind(text: descriptionText, at: 1, in: stmt)
-                self.sqlite.bind(double: next.timeIntervalSince1970, at: 2, in: stmt)
-                self.sqlite.bind(text: taskID, at: 3, in: stmt)
-            }
-        )
-        return try getTaskDetailPayload(taskID: taskID)
-    }
-
-    @discardableResult
     public func patchTaskState(taskID: String, state: String) throws -> [String: Any]? {
         _ = try validatedTaskState(state)
         guard let current = try getTaskDetailPayload(taskID: taskID) else { return nil }
@@ -349,7 +327,10 @@ public final class DemoServerSimulator {
         guard let title = body["title"] as? String else {
             throw DemoBackendError.validation(message: "title is required")
         }
-        guard let description = body["description"] as? String else {
+        let description: String?
+        if body.keys.contains("description") {
+            description = body["description"] as? String
+        } else {
             throw DemoBackendError.validation(message: "description is required")
         }
         guard let stateDict = body["state"] as? [String: Any],
@@ -396,7 +377,7 @@ public final class DemoServerSimulator {
         id: String,
         projectID: String,
         title: String,
-        descriptionText: String,
+        descriptionText: String?,
         state: String,
         assigneeID: String?,
         authorID: String,
@@ -417,7 +398,7 @@ public final class DemoServerSimulator {
             throw DemoBackendError.invalidReference(entity: "author_id", id: authorID)
         }
         let normalizedTitle = try validatedNonEmpty(title, field: "title")
-        let normalizedDescription = try validatedNonEmpty(descriptionText, field: "description")
+        let normalizedDescription = descriptionText?.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedState = try validatedTaskState(state)
 
         suspendAmbientMutationsAfterWrite()
@@ -435,7 +416,7 @@ public final class DemoServerSimulator {
                     self.sqlite.bind(nullableText: assigneeID, at: 3, in: stmt)
                     self.sqlite.bind(text: authorID, at: 4, in: stmt)
                     self.sqlite.bind(text: normalizedTitle, at: 5, in: stmt)
-                    self.sqlite.bind(text: normalizedDescription, at: 6, in: stmt)
+                    self.sqlite.bind(nullableText: normalizedDescription, at: 6, in: stmt)
                     self.sqlite.bind(text: normalizedState, at: 7, in: stmt)
                     self.sqlite.bind(double: createdAt.timeIntervalSince1970, at: 8, in: stmt)
                     self.sqlite.bind(double: updatedAt.timeIntervalSince1970, at: 9, in: stmt)
@@ -473,7 +454,10 @@ public final class DemoServerSimulator {
         guard let title = body["title"] as? String else {
             throw DemoBackendError.validation(message: "title is required")
         }
-        guard let description = body["description"] as? String else {
+        let description: String?
+        if body.keys.contains("description") {
+            description = body["description"] as? String
+        } else {
             throw DemoBackendError.validation(message: "description is required")
         }
         guard let stateDict = body["state"] as? [String: Any],
@@ -482,7 +466,7 @@ public final class DemoServerSimulator {
         }
 
         let normalizedTitle = try validatedNonEmpty(title, field: "title")
-        let normalizedDescription = try validatedNonEmpty(description, field: "description")
+        let normalizedDescription = description?.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedState = try validatedTaskState(stateID)
         let itemsToReplace: [ItemInput]?
         if body.keys.contains("items") {
@@ -529,7 +513,7 @@ public final class DemoServerSimulator {
                 """,
                 bind: { stmt in
                     self.sqlite.bind(text: normalizedTitle, at: 1, in: stmt)
-                    self.sqlite.bind(text: normalizedDescription, at: 2, in: stmt)
+                    self.sqlite.bind(nullableText: normalizedDescription, at: 2, in: stmt)
                     self.sqlite.bind(text: normalizedState, at: 3, in: stmt)
                     self.sqlite.bind(nullableText: assigneeID, at: 4, in: stmt)
                     self.sqlite.bind(double: next.timeIntervalSince1970, at: 5, in: stmt)
@@ -692,7 +676,7 @@ public final class DemoServerSimulator {
             "reviewer_ids": try reviewerIDsFor(taskID: taskID),
             "author_id": row.string("author_id"),
             "title": row.string("title"),
-            "description": row.string("description"),
+            "description": row.nullableString("description") ?? NSNull(),
             "state": labeledValuePayload(id: stateID, label: taskStateLabel(id: stateID)),
             "watcher_ids": try watcherIDs(forTaskID: taskID),
             "items": try itemsPayload(taskID: taskID),
@@ -957,7 +941,7 @@ public final class DemoServerSimulator {
                 assignee_id TEXT NULL,
                 author_id TEXT NOT NULL,
                 title TEXT NOT NULL,
-                description TEXT NOT NULL,
+                description TEXT,
                 state TEXT NOT NULL,
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL,
@@ -1045,7 +1029,7 @@ public final class DemoServerSimulator {
                         sqlite.bind(nullableText: task.assigneeID, at: 3, in: stmt)
                         sqlite.bind(text: task.authorID, at: 4, in: stmt)
                         sqlite.bind(text: task.title, at: 5, in: stmt)
-                        sqlite.bind(text: task.descriptionText, at: 6, in: stmt)
+                        sqlite.bind(nullableText: task.descriptionText, at: 6, in: stmt)
                         sqlite.bind(text: task.state, at: 7, in: stmt)
                         sqlite.bind(double: task.createdAt.timeIntervalSince1970, at: 8, in: stmt)
                         sqlite.bind(double: task.updatedAt.timeIntervalSince1970, at: 9, in: stmt)

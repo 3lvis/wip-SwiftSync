@@ -188,13 +188,17 @@ extension TaskFormSheet {
         )
     }
 
-    func users(matching selectedIDs: Set<String>) -> [User] {
-        machine.users.filter { selectedIDs.contains($0.id) }
+    func descriptionBinding() -> Binding<String> {
+        Binding(
+            get: { draft.descriptionText ?? "" },
+            set: { newValue in
+                draft.descriptionText = newValue
+            }
+        )
     }
 
-    func displayName(for userID: String?) -> String? {
-        guard let userID else { return nil }
-        return machine.users.first(where: { $0.id == userID })?.displayName
+    func users(matching selectedIDs: Set<String>) -> [User] {
+        machine.users.filter { selectedIDs.contains($0.id) }
     }
 
     fileprivate var availableReviewers: [User] {
@@ -223,22 +227,6 @@ extension TaskFormSheet {
         draft.watchers.append(user)
     }
 
-    func peopleSummary(for users: [User]) -> String {
-        let names = users
-            .map(\.displayName)
-            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-
-        switch names.count {
-        case 0:
-            return "None"
-        case 1:
-            return names[0]
-        case 2:
-            return names.joined(separator: ", ")
-        default:
-            return "\(names.count) selected"
-        }
-    }
 }
 
 private extension View {
@@ -258,8 +246,8 @@ extension TaskFormSheet {
     var overviewSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                TextEditor(text: $draft.title)
-                    .frame(minHeight: 72)
+                TextField("Task title", text: $draft.title, axis: .vertical)
+                    .lineLimit(2...4)
                     .font(.title3.weight(.semibold))
                     .accessibilityIdentifier("task-form.title")
 
@@ -275,7 +263,8 @@ extension TaskFormSheet {
 
     var descriptionSection: some View {
         Section("Description") {
-            TextField("Why this task matters", text: $draft.descriptionText)
+            TextField("Why this task matters", text: descriptionBinding(), axis: .vertical)
+                .lineLimit(3...6)
                 .accessibilityIdentifier("task-form.description")
         }
     }

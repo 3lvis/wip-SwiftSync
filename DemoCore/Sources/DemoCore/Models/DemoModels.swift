@@ -76,7 +76,7 @@ public final class Task {
     public var title: String
 
     @RemoteKey("description")
-    public var descriptionText: String
+    public var descriptionText: String?
 
     @RemoteKey("state.id")
     public var state: String
@@ -110,7 +110,7 @@ public final class Task {
         assigneeID: String? = nil,
         authorID: String = "",
         title: String = "",
-        descriptionText: String = "",
+        descriptionText: String? = nil,
         state: String = "",
         stateLabel: String = "",
         createdAt: Date = Date(),

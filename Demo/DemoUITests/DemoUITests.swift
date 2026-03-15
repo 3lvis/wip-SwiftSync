@@ -87,8 +87,8 @@ final class DemoUITests: XCTestCase {
 
         openEditTaskForm(app)
 
-        replaceText(in: app.textViews["task-form.title"], with: updatedTitle, app: app)
-        replaceText(in: app.textFields["task-form.description"], with: "", app: app)
+        replaceText(in: app.textFields["task-form.title"], with: updatedTitle, app: app)
+        replaceText(in: app.textFields["task-form.description"], with: "   ", app: app)
         app.buttons["task-form.save"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -115,7 +115,7 @@ final class DemoUITests: XCTestCase {
         let saveButton = app.buttons["task-form.save"]
         XCTAssertFalse(saveButton.isEnabled)
 
-        replaceText(in: app.textViews["task-form.title"], with: createdTitle, app: app)
+        replaceText(in: app.textFields["task-form.title"], with: createdTitle, app: app)
         selectAuthor(app, userID: authorID)
         addPerson(app, role: "reviewers", userID: reviewerID)
         addPerson(app, role: "watchers", userID: watcherID)
@@ -246,7 +246,7 @@ final class DemoUITests: XCTestCase {
         openProject(app, id: DemoSeedProjectID.accountSecurity)
 
         openCreateTaskForm(app)
-        replaceText(in: app.textViews["task-form.title"], with: draftTitle, app: app)
+        replaceText(in: app.textFields["task-form.title"], with: draftTitle, app: app)
         app.buttons["task-form.cancel"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))
@@ -269,7 +269,7 @@ final class DemoUITests: XCTestCase {
         XCTAssertEqual(detailElement(app, id: "task.title").label, originalTitle)
 
         openEditTaskForm(app)
-        replaceText(in: app.textViews["task-form.title"], with: editedTitle, app: app)
+        replaceText(in: app.textFields["task-form.title"], with: editedTitle, app: app)
         app.buttons["task-form.cancel"].tap()
 
         XCTAssertTrue(app.buttons["task-form.save"].waitForNonExistence(timeout: 0.5))

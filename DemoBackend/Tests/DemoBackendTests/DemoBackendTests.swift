@@ -107,31 +107,6 @@ final class DemoBackendTests: XCTestCase {
         XCTAssertNotNil(UUID(uuidString: newID), "task id '\(newID)' is not a UUID")
     }
 
-    func testSQLiteBackendPatchTaskDescriptionPersistsAcrossReopen() async throws {
-        let url = makeTemporaryDatabaseURL()
-        defer { try? FileManager.default.removeItem(at: url) }
-
-        let backend = try DemoServerSimulator(databaseURL: url, seedData: smallSeedData())
-
-        let before = try backend.getTaskDetailPayload(taskID: taskID)
-        let beforeUpdatedAt = before?["updated_at"] as? String
-        XCTAssertEqual(before?["description"] as? String, "Old description")
-
-        let patched = try backend.patchTaskDescription(
-            taskID: taskID,
-            descriptionText: "New description from server"
-        )
-
-        XCTAssertEqual(patched?["description"] as? String, "New description from server")
-        XCTAssertNotEqual(patched?["updated_at"] as? String, beforeUpdatedAt)
-        // created_at must not change on patch
-        XCTAssertEqual(patched?["created_at"] as? String, before?["created_at"] as? String)
-
-        let reopened = try DemoServerSimulator(databaseURL: url, seedData: smallSeedData())
-        let reopenedTask = try reopened.getTaskDetailPayload(taskID: taskID)
-        XCTAssertEqual(reopenedTask?["description"] as? String, "New description from server")
-    }
-
     func testSQLiteBackendPatchTaskStateAndAssigneeReviewerAndRelationships() async throws {
         let url = makeTemporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url) }
@@ -577,6 +552,46 @@ final class DemoBackendTests: XCTestCase {
         XCTAssertNotEqual(updated["updated_at"] as? String, beforeUpdatedAt)
         // created_at must not change
         XCTAssertEqual(updated["created_at"] as? String, before?["created_at"] as? String)
+    }
+
+    func testUpdateTaskFromBodyDictAllowsClearingDescriptionToNull() throws {
+        let url = makeTemporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let backend = try DemoServerSimulator(databaseURL: url, seedData: smallSeedData())
+
+        let updated = try backend.updateTask(taskID: taskID, body: [
+            "id": taskID,
+            "title": "Updated title via PUT",
+            "description": NSNull(),
+            "state": ["id": "todo", "label": "To Do"]
+        ])
+
+        XCTAssertEqual(updated["id"] as? String, taskID)
+        XCTAssertTrue(updated["description"] is NSNull || updated["description"] == nil)
+    }
+
+    func testCreateTaskAllowsNullDescription() throws {
+        let url = makeTemporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let backend = try DemoServerSimulator(databaseURL: url, seedData: smallSeedData())
+
+        let taskID = UUID().uuidString
+        let now = iso8601(Date())
+        let created = try backend.createTask(body: [
+            "id": taskID,
+            "project_id": projectID,
+            "title": "Null description task",
+            "description": NSNull(),
+            "state": ["id": "todo"],
+            "author_id": userID,
+            "created_at": now,
+            "updated_at": now
+        ])
+
+        XCTAssertEqual(created["id"] as? String, taskID)
+        XCTAssertTrue(created["description"] is NSNull || created["description"] == nil)
     }
 
     func testUpdateTaskFromBodyDictNotFoundThrows() throws {
