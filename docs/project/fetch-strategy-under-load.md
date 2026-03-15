@@ -141,7 +141,7 @@ So the honest external message right now is:
 
 ## Benchmark harness
 
-The opt-in benchmark suite lives in [FetchStrategyBenchmarkTests.swift](/Users/nunez/code/ios/SwiftSync/SwiftSync/Tests/SwiftSyncTests/FetchStrategyBenchmarkTests.swift).
+The opt-in benchmark suite lives in [FetchStrategyBenchmarkTests.swift](../../SwiftSync/Tests/SwiftSyncTests/FetchStrategyBenchmarkTests.swift).
 
 It covers:
 

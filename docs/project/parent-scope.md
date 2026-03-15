@@ -1,6 +1,12 @@
 # Parent-Scoped Sync and Query Behavior
 
-This document explains current parent-scoped behavior and explicit parent relationship rules in SwiftSync.
+Read this when an endpoint only returns children for one parent, such as `/projects/{id}/tasks` or `/users/{id}/notes`.
+
+The core rule is simple:
+- parent-scoped sync always uses an explicit `relationship:` key path
+- relationship-scoped reads always use an explicit `relationship:` + `relationshipID:`
+
+SwiftSync does not infer parent scope for you.
 
 ## TL;DR
 
@@ -38,6 +44,8 @@ toDelete = (rows belonging to this parent scope) - (payload identities)
 ```
 
 If scope resolution is wrong, delete can target valid rows from another logical scope.
+
+That is why the API is explicit here instead of "helpfully" guessing.
 
 ## Minimal Real-World Scenario
 
